@@ -1,5 +1,5 @@
 from app.repositories.track import TrackRepository
-from app.clients.travelpayouts import TravelPayoutsClient
+from app.providers.travelpayouts import TravelPayoutsClient
 
 
 class PriceCheckerService:
@@ -13,7 +13,7 @@ class PriceCheckerService:
         self.client = client
 
 
-    async def check_prices(self):
+    async def check_prices(self) -> None:
 
         tracks = await self.repository.get_active_tracks()
 
@@ -28,19 +28,20 @@ class PriceCheckerService:
             if not response.data:
                 continue
 
-            cheapest_flight = min(
-                response.data,
-                key=lambda flight: flight.price
+
+            cheapest_price = min(
+                flight.price
+                for flight in response.data
             )
 
-            current_price = cheapest_flight.price
+
+            print(
+                f"{track.origin} -> {track.destination}: "
+                f"{cheapest_price} руб."
+            )
+
 
             await self.repository.update_last_price(
                 track,
-                current_price,
-            )
-
-            print(
-                f"{track.origin}->{track.destination}: "
-                f"{current_price} руб."
+                cheapest_price,
             )
