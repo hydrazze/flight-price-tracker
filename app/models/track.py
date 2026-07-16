@@ -34,6 +34,16 @@ class Track(Base):
         nullable=False,
     )
 
+    target_price: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    
+    last_price: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+
     active: Mapped[bool] = mapped_column(
         Boolean,
         default=True,

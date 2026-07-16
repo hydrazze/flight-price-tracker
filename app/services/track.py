@@ -18,10 +18,12 @@ class TrackService:
         origin: str,
         destination: str,
         departure_date: date,
+        target_price: int | None = None,
     ):
         return await self.repository.create(
             user_id=user_id,
             origin=origin,
             destination=destination,
             departure_date=departure_date,
+            target_price=target_price,
         )

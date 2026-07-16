@@ -8,6 +8,7 @@ dependencies = [
     "aiogram>=3.29.1",
     "alembic>=1.18.5",
     "asyncpg>=0.31.0",
+    "httpx>=0.28.1",
     "pydantic-settings>=2.14.2",
     "python-dotenv>=1.2.2",
     "sqlalchemy>=2.0.51",

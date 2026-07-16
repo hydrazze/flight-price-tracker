@@ -68,16 +68,40 @@ async def process_destination(
 async def process_date(
     message: Message,
     state: FSMContext,
-    session: AsyncSession,
-) -> None:
-
-    print("DATE HANDLER WORKS")
+    ) -> None:
 
     departure_date = date.fromisoformat(
         message.text
     )
 
+    await state.update_data(
+        departure_date=departure_date
+    )
+
+    await state.set_state(
+        TrackState.waiting_target_price
+    )
+
+    await message.answer(
+        "Введите желаемую цену в рублях.\n\n"
+        "Например:\n"
+        "15000\n\n"
+        'Или отправьте "-" для отслеживания любых изменений цены.'
+    )
+
+@router.message(TrackState.waiting_target_price)
+async def process_target_price(
+    message: Message,
+    state: FSMContext,
+    session: AsyncSession,
+) -> None:
+
     data = await state.get_data()
+
+    target_price: int | None = None
+
+    if message.text != "-":
+        target_price = int(message.text)
 
     service = TrackService(session)
 
@@ -91,7 +115,8 @@ async def process_date(
         user_id=user.id,
         origin=data["origin"],
         destination=data["destination"],
-        departure_date=departure_date,
+        departure_date=data["departure_date"],
+        target_price=target_price,
     )
 
     await state.clear()
