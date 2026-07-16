@@ -1,4 +1,4 @@
-from app.clients.travelpayouts import TravelPayoutsClient
+from app.providers.travelpayouts import TravelPayoutsClient
 from app.database.session import AsyncSessionLocal
 from app.repositories.track import TrackRepository
 from app.services.price_checker import PriceCheckerService

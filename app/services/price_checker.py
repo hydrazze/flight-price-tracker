@@ -1,6 +1,8 @@
 from app.repositories.track import TrackRepository
 from app.providers.travelpayouts import TravelPayoutsClient
 
+from app.services.notification import NotificationService
+
 
 class PriceCheckerService:
 
@@ -8,9 +10,11 @@ class PriceCheckerService:
         self,
         repository: TrackRepository,
         client: TravelPayoutsClient,
+        notification_service: NotificationService,
     ):
         self.repository = repository
         self.client = client
+        self.notification_service = notification_service
 
 
     async def check_prices(self) -> None:
@@ -40,6 +44,17 @@ class PriceCheckerService:
                 f"{cheapest_price} руб."
             )
 
+            if (
+                track.target_price is not None
+                and cheapest_price <= track.target_price
+            ):
+                await self.notification_service.send_price_alert(
+                    telegram_id=track.user.telegram_id,
+                    origin=track.origin,
+                    destination=track.destination,
+                    price=cheapest_price,
+                    target_price=track.target_price,
+                )
 
             await self.repository.update_last_price(
                 track,

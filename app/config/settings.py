@@ -3,10 +3,9 @@ from pydantic import SecretStr
 
 
 class Settings(BaseSettings):
-    bot_token: str
-    database_url: str
-    travelpayouts_api_key: str
+    bot_token: SecretStr
     travelpayouts_api_key: SecretStr
+    database_url: str
 
     model_config = SettingsConfigDict(
         env_file=".env",
