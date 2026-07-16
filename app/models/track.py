@@ -1,9 +1,14 @@
 from datetime import date, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
+
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
 class Track(Base):
@@ -17,6 +22,10 @@ class Track(Base):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"),
         nullable=False,
+    )
+
+    user: Mapped["User"] = relationship(
+        back_populates="tracks"
     )
 
     origin: Mapped[str] = mapped_column(
@@ -38,7 +47,7 @@ class Track(Base):
         Integer,
         nullable=True,
     )
-    
+
     last_price: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,

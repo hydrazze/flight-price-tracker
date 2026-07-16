@@ -2,6 +2,7 @@ from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.track import Track
 
@@ -43,7 +44,11 @@ class TrackRepository:
     ) -> list[Track]:
 
         result = await self.session.execute(
-            select(Track).where(
+            select(Track)
+            .options(
+                selectinload(Track.user)
+            )
+            .where(
                 Track.active.is_(True)
             )
         )
