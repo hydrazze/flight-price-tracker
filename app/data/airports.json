@@ -1,0 +1,238 @@
+{
+    "MOW": [
+        "москва",
+        "moscow"
+    ],
+    "LED": [
+        "санкт-петербург",
+        "петербург",
+        "питер",
+        "спб",
+        "saint petersburg"
+    ],
+    "UFA": [
+        "уфа",
+        "ufa"
+    ],
+    "KZN": [
+        "казань",
+        "kazan"
+    ],
+    "SVX": [
+        "екатеринбург",
+        "екб",
+        "yekaterinburg"
+    ],
+    "OVB": [
+        "новосибирск",
+        "novosibirsk"
+    ],
+    "VVO": [
+        "владивосток",
+        "vladivostok"
+    ],
+    "KHV": [
+        "хабаровск",
+        "khabarovsk"
+    ],
+    "ROV": [
+        "ростов-на-дону",
+        "ростов",
+        "rostov"
+    ],
+    "AER": [
+        "сочи",
+        "sochi"
+    ],
+    "MRV": [
+        "минеральные воды",
+        "кавминводы",
+        "mineralnye vody"
+    ],
+    "KGD": [
+        "калининград",
+        "kaliningrad"
+    ],
+    "IKT": [
+        "иркутск",
+        "irkutsk"
+    ],
+    "TAS": [
+        "ташкент",
+        "tashkent"
+    ],
+    "ALA": [
+        "алматы",
+        "алма-ата",
+        "almaty"
+    ],
+    "TBS": [
+        "тбилиси",
+        "tbilisi"
+    ],
+    "EVN": [
+        "ереван",
+        "yerevan"
+    ],
+    "BAK": [
+        "бакy",
+        "baku"
+    ],
+
+    "IST": [
+        "стамбул",
+        "istanbul"
+    ],
+    "SAW": [
+        "стамбул сабиха",
+        "sabiha",
+        "sabiha gokcen"
+    ],
+    "AYT": [
+        "анталья",
+        "antalya"
+    ],
+    "DLM": [
+        "даламан",
+        "dalaman"
+    ],
+
+    "DXB": [
+        "дубай",
+        "dubai"
+    ],
+    "AUH": [
+        "абу-даби",
+        "абудаби",
+        "abu dhabi"
+    ],
+    "DOH": [
+        "доха",
+        "doha"
+    ],
+
+    "CDG": [
+        "париж",
+        "paris"
+    ],
+    "LHR": [
+        "лондон",
+        "london"
+    ],
+    "AMS": [
+        "амстердам",
+        "amsterdam"
+    ],
+    "FRA": [
+        "франкфурт",
+        "frankfurt"
+    ],
+    "MUC": [
+        "мюнхен",
+        "munich"
+    ],
+    "MAD": [
+        "мадрид",
+        "madrid"
+    ],
+    "BCN": [
+        "барселона",
+        "barcelona"
+    ],
+    "FCO": [
+        "рим",
+        "rome"
+    ],
+    "MXP": [
+        "милан",
+        "milan"
+    ],
+    "VIE": [
+        "вена",
+        "vienna"
+    ],
+    "PRG": [
+        "прага",
+        "prague"
+    ],
+    "ATH": [
+        "афины",
+        "athens"
+    ],
+    "LIS": [
+        "лиссабон",
+        "lisbon"
+    ],
+
+    "NYC": [
+        "нью-йорк",
+        "new york"
+    ],
+    "LAX": [
+        "лос-анджелес",
+        "los angeles"
+    ],
+    "MIA": [
+        "майами",
+        "miami"
+    ],
+    "SFO": [
+        "сан-франциско",
+        "san francisco"
+    ],
+    "ORD": [
+        "чикаго",
+        "chicago"
+    ],
+    "YYZ": [
+        "торонто",
+        "toronto"
+    ],
+
+    "BKK": [
+        "бангкок",
+        "bangkok"
+    ],
+    "HKT": [
+        "пхукет",
+        "phuket"
+    ],
+    "SIN": [
+        "сингапур",
+        "singapore"
+    ],
+    "KUL": [
+        "куала-лумпур",
+        "kuala lumpur"
+    ],
+    "HKG": [
+        "гонконг",
+        "hong kong"
+    ],
+    "NRT": [
+        "токио",
+        "tokyo"
+    ],
+    "ICN": [
+        "сеул",
+        "seoul"
+    ],
+
+    "DEL": [
+        "дели",
+        "delhi"
+    ],
+    "BOM": [
+        "мумбаи",
+        "mumbai"
+    ],
+
+    "CAI": [
+        "каир",
+        "cairo"
+    ],
+    "CPT": [
+        "кейптаун",
+        "cape town"
+    ]
+}

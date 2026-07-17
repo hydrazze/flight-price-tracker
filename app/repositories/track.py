@@ -90,3 +90,25 @@ class TrackRepository:
         return list(
             result.scalars().all()
         )
+
+    async def delete(
+        self,
+        track: Track,
+    ) -> None:
+
+        await self.session.delete(track)
+
+        await self.session.commit()
+    
+    async def get_by_id(
+        self,
+        track_id: int,
+    ) -> Track | None:
+
+        result = await self.session.execute(
+            select(Track).where(
+                Track.id == track_id
+            )
+        )
+
+        return result.scalar_one_or_none()

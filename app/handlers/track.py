@@ -5,13 +5,15 @@ from aiogram.fsm.context import FSMContext
 
 from app.states.track import TrackState
 
-from datetime import date
+from app.utils.date_parser import parse_date
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.track import TrackService
 
 from app.services.user import UserService
+
+from app.services.city_resolver import resolver
 
 
 router = Router()
@@ -35,8 +37,19 @@ async def process_origin(
     message: Message,
     state: FSMContext,
 ) -> None:
+
+    origin = resolver.resolve(message.text)
+
+    if origin is None:
+        await message.answer(
+            "Не удалось найти аэропорт.\n"
+            "Введите город или код аэропорта, например:\n"
+            "Москва или MOW"
+        )
+        return
+
     await state.update_data(
-        origin=message.text
+        origin=origin
     )
 
     await state.set_state(
@@ -52,8 +65,20 @@ async def process_destination(
     message: Message,
     state: FSMContext,
 ) -> None:
+    destination = resolver.resolve(message.text)
+
+    if destination is None:
+        await message.answer(
+            "❌ Не удалось найти такой город.\n\n"
+            "Попробуйте написать, например:\n"
+            "Москва\n"
+            "Казань\n"
+            "Стамбул"
+        )
+        return
+
     await state.update_data(
-        destination=message.text
+        destination=destination
     )
 
     await state.set_state(
@@ -61,7 +86,8 @@ async def process_destination(
     )
 
     await message.answer(
-        "Введите дату вылета (YYYY-MM-DD):"
+        "Введите дату вылета (DD-MM-YYYY):\n\n"
+        "Например: 30-08-2026"
     )
 
 @router.message(TrackState.waiting_date)
@@ -70,9 +96,15 @@ async def process_date(
     state: FSMContext,
     ) -> None:
 
-    departure_date = date.fromisoformat(
-        message.text
-    )
+    departure_date = parse_date(message.text)
+
+    if departure_date is None:
+        await message.answer(
+            "Не удалось распознать дату.\n"
+            "Используйте формат DD-MM-YYYY.\n\n"
+            "Например: 30-08-2026"
+        )
+        return
 
     await state.update_data(
         departure_date=departure_date

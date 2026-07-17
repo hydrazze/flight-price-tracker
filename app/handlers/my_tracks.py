@@ -2,9 +2,14 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
+from aiogram.types import CallbackQuery
+
+from app.services.track import TrackService
 
 from app.database.engine import async_session_maker
 from app.repositories.track import TrackRepository
+
+from app.keyboards.tracks import tracks_keyboard
 
 
 router = Router()
@@ -40,4 +45,37 @@ async def my_tracks_handler(message: Message):
             )
 
 
-        await message.answer(text)
+        await message.answer(
+            text,
+            reply_markup=tracks_keyboard(tracks),
+        )
+
+@router.callback_query(
+    lambda c: c.data.startswith("delete_track:")
+)
+async def delete_track(
+    callback: CallbackQuery,
+    session: AsyncSession,
+) -> None:
+
+    track_id = int(
+        callback.data.split(":")[1]
+    )
+
+    service = TrackService(session)
+
+    deleted = await service.delete_track(
+        track_id
+    )
+
+    if deleted:
+        await callback.message.edit_text(
+            "✅ Отслеживание удалено."
+        )
+    else:
+        await callback.answer(
+            "Отслеживание не найдено.",
+            show_alert=True,
+        )
+
+    await callback.answer()

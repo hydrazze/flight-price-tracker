@@ -27,3 +27,17 @@ class TrackService:
             departure_date=departure_date,
             target_price=target_price,
         )
+    
+    async def delete_track(
+        self,
+        track_id: int,
+    ) -> bool:
+
+        track = await self.repository.get_by_id(track_id)
+
+        if track is None:
+            return False
+
+        await self.repository.delete(track)
+
+        return True

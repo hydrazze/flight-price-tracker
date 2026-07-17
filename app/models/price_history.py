@@ -29,3 +29,11 @@ class PriceHistory(Base):
         server_default=func.now(),
         nullable=False,
     )
+
+    track_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "tracks.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
