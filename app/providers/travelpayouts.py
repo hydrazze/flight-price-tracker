@@ -43,7 +43,6 @@ class TravelPayoutsClient:
         )
 
         response.raise_for_status()
-        print(response.json())
 
         return PricesForDatesResponse.model_validate(
             response.json()

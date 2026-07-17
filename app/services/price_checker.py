@@ -56,7 +56,8 @@ class PriceCheckerService:
                     target_price=track.target_price,
                 )
 
-            await self.repository.update_last_price(
-                track,
-                cheapest_price,
-            )
+            if track.last_price != cheapest_price:
+                await self.repository.update_last_price(
+                    track,
+                    cheapest_price,
+                )

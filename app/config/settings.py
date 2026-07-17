@@ -3,7 +3,7 @@ from pydantic import SecretStr
 
 
 class Settings(BaseSettings):
-    bot_token: SecretStr
+    bot_token: str
     travelpayouts_api_key: SecretStr
     database_url: str
 
