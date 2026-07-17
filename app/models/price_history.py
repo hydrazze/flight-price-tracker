@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, func
+from sqlalchemy import DateTime, ForeignKey, Integer, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -19,13 +19,8 @@ class PriceHistory(Base):
         nullable=False,
     )
 
-    provider_id: Mapped[int] = mapped_column(
-        ForeignKey("providers.id"),
-        nullable=False,
-    )
-
     price: Mapped[int] = mapped_column(
-        Numeric(10, 2),
+        Integer,
         nullable=False,
     )
 

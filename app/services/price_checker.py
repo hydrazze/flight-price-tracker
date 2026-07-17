@@ -1,5 +1,6 @@
 from app.repositories.track import TrackRepository
 from app.providers.travelpayouts import TravelPayoutsClient
+from app.repositories.price_history import PriceHistoryRepository
 
 from app.services.notification import NotificationService
 
@@ -11,10 +12,12 @@ class PriceCheckerService:
         repository: TrackRepository,
         client: TravelPayoutsClient,
         notification_service: NotificationService,
+        price_history_repository: PriceHistoryRepository,
     ):
         self.repository = repository
         self.client = client
         self.notification_service = notification_service
+        self.price_history_repository = price_history_repository
 
 
     async def check_prices(self) -> None:
@@ -60,4 +63,8 @@ class PriceCheckerService:
                 await self.repository.update_last_price(
                     track,
                     cheapest_price,
+                )
+                await self.price_history_repository.create(
+                    track_id=track.id,
+                    price=cheapest_price,
                 )

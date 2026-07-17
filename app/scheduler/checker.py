@@ -5,6 +5,7 @@ from app.repositories.track import TrackRepository
 from app.providers.travelpayouts import TravelPayoutsClient
 from app.services.price_checker import PriceCheckerService
 from app.services.notification import NotificationService
+from app.repositories.price_history import PriceHistoryRepository
 
 from aiogram import Bot
 
@@ -16,6 +17,8 @@ async def run_price_checker():
     async with async_session_maker() as session:
 
         repository = TrackRepository(session)
+
+        history_repository = PriceHistoryRepository(session)
 
         client = TravelPayoutsClient()
 
@@ -31,6 +34,7 @@ async def run_price_checker():
             repository,
             client,
             notification_service,
+            history_repository            
         )
 
         await service.check_prices()

@@ -8,6 +8,7 @@ from app.repositories.track import TrackRepository
 from app.providers.travelpayouts import TravelPayoutsClient
 from app.services.notification import NotificationService
 from app.services.price_checker import PriceCheckerService
+from app.repositories.price_history import PriceHistoryRepository
 
 
 async def main():
@@ -22,6 +23,8 @@ async def main():
             session
         )
 
+        history_repository = PriceHistoryRepository(session)
+
         client = TravelPayoutsClient()
 
         notification_service = NotificationService(
@@ -32,6 +35,7 @@ async def main():
             repository,
             client,
             notification_service,
+            history_repository           
         )
 
         await service.check_prices()
