@@ -23,7 +23,7 @@ async def run_price_checker():
         client = TravelPayoutsClient()
 
         bot = Bot(
-            token=settings.bot_token
+            token=settings.bot_token.get_secret_value()
         )
 
         notification_service = NotificationService(

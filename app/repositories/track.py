@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.track import Track
+from app.models.user import User
 
 
 class TrackRepository:
@@ -71,3 +72,21 @@ class TrackRepository:
         track.last_price = price
 
         await self.session.commit()
+    
+    async def get_user_tracks(
+        self,
+        telegram_id: int,
+    ) -> list[Track]:
+
+        result = await self.session.execute(
+            select(Track)
+            .join(User)
+            .where(
+                User.telegram_id == telegram_id,
+                Track.active.is_(True)
+            )
+        )
+
+        return list(
+            result.scalars().all()
+        )
