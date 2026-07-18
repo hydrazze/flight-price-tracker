@@ -1,22 +1,39 @@
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from aiogram.fsm.context import FSMContext
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+
 from app.states.track import TrackState
 
+
 from app.repositories.track import TrackRepository
+from app.repositories.price_history import PriceHistoryRepository
+
+
 from app.services.track import TrackService
+from app.services.price_checker import PriceCheckerService
+from app.services.notification import NotificationService
+
+
+from app.providers.travelpayouts import TravelPayoutsClient
+
 
 from app.keyboards.tracks import (
     tracks_keyboard,
     track_detail_keyboard,
+    delete_confirm_keyboard,
 )
 
-from app.keyboards.tracks import delete_confirm_keyboard
+
+from app.bot import bot
+
 
 router = Router()
+
 
 
 def get_track_status(track):
@@ -30,8 +47,8 @@ def get_track_status(track):
     elif track.status.value == "error":
         return "⚠️ Ошибка проверки"
 
-    else:
-        return "⏳ Ожидает проверки"
+    return "⏳ Ожидает проверки"
+
 
 
 def format_track(track):
@@ -44,16 +61,39 @@ def format_track(track):
         else "нет данных"
     )
 
+
     return (
         f"✈️ {track.origin} → {track.destination}\n\n"
-        f"📅 Дата: {track.departure_date}\n"
+        f"📅 Дата: {track.departure_date.strftime('%d-%m-%Y')}\n"
         f"🎯 Цель: "
-        f"{track.target_price or 'не указана'} ₽\n"
+        f"{track.target_price if track.target_price is not None else 'не указана'} ₽\n"
         f"📉 Сейчас: "
-        f"{track.last_price or 'нет данных'} ₽\n"
+        f"{track.last_price if track.last_price is not None else 'нет данных'} ₽\n"
         f"{get_track_status(track)}\n"
         f"🕒 Проверено: {last_checked}"
     )
+
+
+
+def format_tracks_list(tracks):
+
+    text = "Ваши отслеживания:\n\n"
+
+
+    for track in tracks:
+
+        text += (
+            f"✈️ {track.origin} → {track.destination}\n"
+            f"📅 {track.departure_date.strftime('%d-%m-%Y')}\n"
+            f"🎯 Цель: "
+            f"{track.target_price if track.target_price is not None else 'не указана'} ₽\n"
+            f"📉 Сейчас: "
+            f"{track.last_price if track.last_price is not None else 'нет данных'} ₽\n\n"
+        )
+
+
+    return text
+
 
 
 # ==========================
@@ -68,39 +108,25 @@ async def my_tracks_handler(
 
     repository = TrackRepository(session)
 
+
     tracks = await repository.get_user_tracks(
         telegram_id=message.from_user.id
     )
 
+
     if not tracks:
+
         await message.answer(
             "У вас нет активных отслеживаний."
         )
+
         return
 
 
-    text = "Ваши отслеживания:\n\n"
-
-
-    for track in tracks:
-
-        text += (
-            f"✈️ {track.origin} → {track.destination}\n"
-            f"📅 {track.departure_date}\n"
-            f"🎯 Цель: "
-            f"{track.target_price or 'не указана'} ₽\n"
-            f"📉 Сейчас: "
-            f"{track.last_price or 'нет данных'} ₽\n\n"
-        )
-
-
     await message.answer(
-        text,
+        format_tracks_list(tracks),
         reply_markup=tracks_keyboard(tracks),
     )
-
-
-
 # ==========================
 # открыть конкретный трек
 # ==========================
@@ -120,6 +146,7 @@ async def open_track(
 
     repository = TrackRepository(session)
 
+
     track = await repository.get_by_id(
         track_id
     )
@@ -128,9 +155,10 @@ async def open_track(
     if track is None:
 
         await callback.answer(
-            "Трек не найден",
+            "❌ Трек не найден.",
             show_alert=True,
         )
+
         return
 
 
@@ -173,27 +201,12 @@ async def back_to_tracks(
         )
 
         await callback.answer()
+
         return
 
 
-
-    text = "Ваши отслеживания:\n\n"
-
-
-    for track in tracks:
-
-        text += (
-            f"✈️ {track.origin} → {track.destination}\n"
-            f"📅 {track.departure_date}\n"
-            f"🎯 Цель: "
-            f"{track.target_price or 'не указана'} ₽\n"
-            f"📉 Сейчас: "
-            f"{track.last_price or 'нет данных'} ₽\n\n"
-        )
-
-
     await callback.message.edit_text(
-        text,
+        format_tracks_list(tracks),
         reply_markup=tracks_keyboard(tracks),
     )
 
@@ -203,7 +216,7 @@ async def back_to_tracks(
 
 
 # ==========================
-# удалить трек
+# удаление трека
 # ==========================
 
 @router.callback_query(
@@ -227,6 +240,8 @@ async def delete_track_confirm(
 
 
     await callback.answer()
+
+
 
 @router.callback_query(
     lambda c: c.data.startswith("confirm_delete:")
@@ -266,6 +281,11 @@ async def confirm_delete(
     await callback.answer()
 
 
+
+# ==========================
+# изменение целевой цены
+# ==========================
+
 @router.callback_query(
     lambda c: c.data.startswith("edit_target_price:")
 )
@@ -278,13 +298,16 @@ async def edit_target_price(
         callback.data.split(":")[1]
     )
 
+
     await state.update_data(
         track_id=track_id
     )
 
+
     await state.set_state(
         TrackState.editing_target_price
     )
+
 
     await callback.message.edit_text(
         "Введите новую целевую цену.\n\n"
@@ -293,28 +316,24 @@ async def edit_target_price(
         "Или отправьте '-' чтобы убрать целевую цену."
     )
 
+
     await callback.answer()
 
 
-@router.message(
-    TrackState.editing_target_price
-)
-async def process_new_target_price(
+
+@router.message(TrackState.waiting_target_price)
+async def process_target_price(
     message: Message,
     state: FSMContext,
     session: AsyncSession,
-):
+) -> None:
 
     data = await state.get_data()
 
-    track_id = data["track_id"]
+    target_price: int | None = None
 
 
-    if message.text == "-":
-
-        target_price = None
-
-    else:
+    if message.text != "-":
 
         try:
             target_price = int(message.text)
@@ -322,10 +341,32 @@ async def process_new_target_price(
         except ValueError:
 
             await message.answer(
-                "❌ Введите число или '-'."
+                "❌ Цена должна быть числом.\n\n"
+                "Например: 15000\n"
+                "Или отправьте '-' чтобы отслеживать любые изменения."
             )
 
             return
+
+
+        if target_price <= 0:
+
+            await message.answer(
+                "❌ Цена должна быть больше 0 ₽."
+            )
+
+            return
+
+
+        if target_price > 1_000_000:
+
+            await message.answer(
+                "❌ Слишком большая цена.\n"
+                "Введите сумму до 1 000 000 ₽."
+            )
+
+            return
+
 
 
     service = TrackService(session)
@@ -349,44 +390,154 @@ async def process_new_target_price(
         return
 
 
-    if track.status.value == "available":
 
-        status = "✅ Рейсы найдены"
-
-    elif track.status.value == "not_found":
-
-        status = "❌ Рейсы не найдены"
-
-    elif track.status.value == "error":
-
-        status = "⚠️ Ошибка проверки"
-
-    else:
-
-        status = "⏳ Ожидает проверки"
-
-
-    text = (
+    await message.answer(
         "✅ Целевая цена обновлена!\n\n"
-        f"✈️ {track.origin} → {track.destination}\n\n"
-        f"📅 Дата: {track.departure_date}\n"
-        f"💰 Сейчас: {track.last_price or 'нет данных'} ₽\n"
-        f"🎯 Цель: "
-        f"{track.target_price if track.target_price is not None else 'не указана'} ₽"
-        f"{status}\n"
+        + format_track(track),
+        reply_markup=track_detail_keyboard(
+            track.id
+        ),
     )
 
 
-    if track.last_checked_at:
+
+# ==========================
+# история цены
+# ==========================
+
+@router.callback_query(
+    lambda c: c.data.startswith("price_history:")
+)
+async def show_price_history(
+    callback: CallbackQuery,
+    session: AsyncSession,
+):
+
+    track_id = int(
+        callback.data.split(":")[1]
+    )
+
+
+    repository = PriceHistoryRepository(
+        session
+    )
+
+
+    history = await repository.get_track_history(
+        track_id
+    )
+
+
+    if not history:
+
+        await callback.answer(
+            "История цены пока пустая.",
+            show_alert=True,
+        )
+
+        return
+
+
+
+    text = "📊 История цены\n\n"
+
+
+    for item in history[:10]:
 
         text += (
-            f"🕒 Проверено: "
-            f"{track.last_checked_at.strftime('%d.%m.%Y %H:%M')}"
+            f"💰 {item.price} ₽\n"
+            f"🕒 {item.checked_at.strftime('%d.%m.%Y %H:%M')}\n\n"
         )
 
 
-    await message.answer(
+    await callback.message.edit_text(
         text,
+        reply_markup=track_detail_keyboard(
+            track_id
+        ),
+    )
+
+
+    await callback.answer()
+
+
+
+# ==========================
+# ручная проверка цены
+# ==========================
+
+@router.callback_query(
+    lambda c: c.data.startswith("check_track:")
+)
+async def check_track_now(
+    callback: CallbackQuery,
+    session: AsyncSession,
+):
+
+    track_id = int(
+        callback.data.split(":")[1]
+    )
+
+
+    repository = TrackRepository(session)
+
+
+    track = await repository.get_user_track(
+        track_id=track_id,
+        telegram_id=callback.from_user.id,
+    )
+
+
+    if track is None:
+
+        await callback.answer(
+            "❌ Отслеживание не найдено.",
+            show_alert=True,
+        )
+
+        return
+
+
+
+    client = TravelPayoutsClient()
+
+
+    history_repository = PriceHistoryRepository(
+        session
+    )
+
+
+    notification_service = NotificationService(
+        bot
+    )
+
+
+    checker = PriceCheckerService(
+        repository=repository,
+        client=client,
+        notification_service=notification_service,
+        price_history_repository=history_repository,
+    )
+
+
+    await callback.answer(
+        "🔄 Проверяю цену..."
+    )
+
+
+    await checker.check_one_track(
+        track_id
+    )
+
+
+    track = await repository.get_by_id(
+        track_id
+    )
+
+
+    await callback.message.edit_text(
+        "✅ Проверка завершена!\n\n"
+        + format_track(track),
         reply_markup=track_detail_keyboard(
             track.id
         ),

@@ -130,3 +130,51 @@ class TrackRepository:
         )
 
         return result.scalar_one_or_none()
+    
+    async def exists(
+        self,
+        user_id: int,
+        origin: str,
+        destination: str,
+        departure_date: date,
+    ) -> bool:
+
+        result = await self.session.execute(
+            select(Track).where(
+                Track.user_id == user_id,
+                Track.origin == origin,
+                Track.destination == destination,
+                Track.departure_date == departure_date,
+                Track.active.is_(True),
+            )
+        )
+
+        return result.scalar_one_or_none() is not None
+    
+    async def deactivate_expired_tracks(
+        self,
+    ) -> list[Track]:
+
+        result = await self.session.execute(
+            select(Track)
+            .options(selectinload(Track.user))
+            .where(
+                Track.active.is_(True),
+                Track.departure_date < date.today(),
+            )
+        )
+
+        tracks = list(
+            result.scalars().all()
+        )
+
+
+        for track in tracks:
+
+            track.active = False
+
+
+        await self.session.commit()
+
+
+        return tracks

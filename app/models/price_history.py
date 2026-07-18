@@ -15,7 +15,10 @@ class PriceHistory(Base):
     )
 
     track_id: Mapped[int] = mapped_column(
-        ForeignKey("tracks.id"),
+        ForeignKey(
+            "tracks.id",
+            ondelete="CASCADE",
+        ),
         nullable=False,
     )
 
@@ -30,10 +33,4 @@ class PriceHistory(Base):
         nullable=False,
     )
 
-    track_id: Mapped[int] = mapped_column(
-        ForeignKey(
-            "tracks.id",
-            ondelete="CASCADE",
-        ),
-        nullable=False,
-    )
+    

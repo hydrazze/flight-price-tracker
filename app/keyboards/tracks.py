@@ -47,6 +47,13 @@ def track_detail_keyboard(track_id: int):
 
     builder.row(
         InlineKeyboardButton(
+            text="📊 История цены",
+            callback_data=f"price_history:{track_id}",
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
             text="🗑 Удалить",
             callback_data=f"delete_track:{track_id}",
         )

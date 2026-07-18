@@ -20,6 +20,18 @@ class TrackService:
         departure_date: date,
         target_price: int | None = None,
     ):
+
+        exists = await self.repository.exists(
+            user_id=user_id,
+            origin=origin,
+            destination=destination,
+            departure_date=departure_date,
+        )
+
+        if exists:
+            return None
+
+
         return await self.repository.create(
             user_id=user_id,
             origin=origin,

@@ -101,3 +101,23 @@ class NotificationService:
                 f"({departure_date.strftime('%d.%m.%Y')})"
             ),
         )
+
+    async def send_track_expired_alert(
+        self,
+        telegram_id: int,
+        origin: str,
+        destination: str,
+        departure_date: date,
+    ) -> None:
+
+        await self.bot.send_message(
+            chat_id=telegram_id,
+            text=(
+                "🛫 Отслеживание завершено\n\n"
+                f"✈️ {origin} → {destination}\n"
+                f"📅 Дата вылета: "
+                f"{departure_date.strftime('%d-%m-%Y')}\n\n"
+                "Рейс уже состоялся.\n"
+                "Отслеживание автоматически отключено."
+            ),
+        )

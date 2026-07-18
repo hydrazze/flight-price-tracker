@@ -1,3 +1,5 @@
+from datetime import date
+
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
@@ -98,12 +100,25 @@ async def process_date(
 
     departure_date = parse_date(message.text)
 
+
     if departure_date is None:
+
         await message.answer(
-            "Не удалось распознать дату.\n"
-            "Используйте формат DD-MM-YYYY.\n\n"
+            "❌ Неверный формат даты.\n\n"
+            "Используйте DD-MM-YYYY.\n"
             "Например: 30-08-2026"
         )
+
+        return
+
+
+    if departure_date <= date.today():
+
+        await message.answer(
+            "❌ Дата вылета должна быть в будущем.\n\n"
+            "Введите другую дату:"
+        )
+
         return
 
     await state.update_data(
@@ -130,20 +145,58 @@ async def process_target_price(
 
     data = await state.get_data()
 
+
     target_price: int | None = None
 
+
     if message.text != "-":
-        target_price = int(message.text)
+
+        try:
+
+            target_price = int(message.text)
+
+        except ValueError:
+
+            await message.answer(
+                "❌ Цена должна быть числом.\n\n"
+                "Например: 15000\n\n"
+                "Или отправьте '-' для отслеживания любых изменений цены."
+            )
+
+            return
+
+
+        if target_price <= 0:
+
+            await message.answer(
+                "❌ Цена должна быть больше 0."
+            )
+
+            return
+
+
+        if target_price > 500000:
+
+            await message.answer(
+                "❌ Слишком большая цена.\n"
+                "Введите значение до 500000 ₽."
+            )
+
+            return
+
 
     service = TrackService(session)
 
+
     user_service = UserService(session)
+
 
     user = await user_service.get_by_telegram_id(
         message.from_user.id
     )
 
-    await service.create_track(
+
+    track = await service.create_track(
         user_id=user.id,
         origin=data["origin"],
         destination=data["destination"],
@@ -151,8 +204,22 @@ async def process_target_price(
         target_price=target_price,
     )
 
+
     await state.clear()
 
+
+    if track is None:
+
+        await message.answer(
+            "❌ Такое отслеживание уже существует.\n\n"
+            f"✈️ {data['origin']} → {data['destination']}\n"
+            f"📅 Дата: {data['departure_date'].strftime('%d-%m-%Y')}\n\n"
+            "Изменить целевую цену можно через карточку трека."
+        )
+
+        return
+
+
     await message.answer(
-        "Отслеживание создано! ✈️"
+        "✅ Отслеживание создано! ✈️"
     )
