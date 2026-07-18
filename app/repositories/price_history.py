@@ -1,11 +1,16 @@
 from app.models.price_history import PriceHistory
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class PriceHistoryRepository:
 
-    def __init__(self, session: AsyncSession):
+    def __init__(
+        self,
+        session: AsyncSession,
+    ):
         self.session = session
+
 
     async def create(
         self,
@@ -19,5 +24,3 @@ class PriceHistoryRepository:
         )
 
         self.session.add(history)
-
-        await self.session.commit()

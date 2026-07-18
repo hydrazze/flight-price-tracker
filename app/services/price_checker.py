@@ -1,8 +1,12 @@
+from datetime import datetime, timezone
+
 from app.repositories.track import TrackRepository
 from app.providers.travelpayouts import TravelPayoutsClient
 from app.repositories.price_history import PriceHistoryRepository
 
 from app.services.notification import NotificationService
+
+from app.models.enums import TrackStatus
 
 
 class PriceCheckerService:
@@ -26,13 +30,25 @@ class PriceCheckerService:
 
         for track in tracks:
 
-            response = await self.client.get_prices_for_dates(
-                origin=track.origin,
-                destination=track.destination,
-                departure_date=track.departure_date,
-            )
+            try:
+                response = await self.client.get_prices_for_dates(
+                    origin=track.origin,
+                    destination=track.destination,
+                    departure_date=track.departure_date,
+                )
+
+                track.last_checked_at = datetime.now(timezone.utc)
+
+            except Exception:
+                track.status = TrackStatus.ERROR
+                track.last_checked_at = datetime.now(timezone.utc)
+
+                continue
+
 
             if not response.data:
+
+                track.status = TrackStatus.NOT_FOUND
 
                 if not track.no_flights_notified:
 
@@ -45,32 +61,18 @@ class PriceCheckerService:
 
                     track.no_flights_notified = True
 
-                    await self.repository.save(track)
-
                 continue
+
+
+            track.status = TrackStatus.AVAILABLE
+            track.no_flights_notified = False
+
 
             cheapest_price = min(
                 flight.price
                 for flight in response.data
             )
 
-            if not track.no_flights_notified:
-
-                track.no_flights_notified = True
-
-                await self.repository.save(track)
-
-                await self.notification_service.send_no_flights_alert(
-                    telegram_id=track.user.telegram_id,
-                    origin=track.origin,
-                    destination=track.destination,
-                    departure_date=track.departure_date,
-                )
-
-            print(
-                f"{track.origin} -> {track.destination}: "
-                f"{cheapest_price} руб."
-            )
 
             if (
                 track.target_price is not None
@@ -84,12 +86,15 @@ class PriceCheckerService:
                     target_price=track.target_price,
                 )
 
+
             if track.last_price != cheapest_price:
-                await self.repository.update_last_price(
-                    track,
-                    cheapest_price,
-                )
+
                 await self.price_history_repository.create(
                     track_id=track.id,
                     price=cheapest_price,
                 )
+
+                track.last_price = cheapest_price
+
+
+        await self.repository.save()

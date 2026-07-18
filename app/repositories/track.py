@@ -35,7 +35,6 @@ class TrackRepository:
         self.session.add(track)
 
         await self.session.commit()
-
         await self.session.refresh(track)
 
         return track
@@ -46,33 +45,15 @@ class TrackRepository:
 
         result = await self.session.execute(
             select(Track)
-            .options(
-                selectinload(Track.user)
-            )
-            .where(
-                Track.active.is_(True)
-            )
+            .options(selectinload(Track.user))
+            .where(Track.active.is_(True))
         )
 
         return list(result.scalars().all())
 
-    async def save(
-        self,
-        track: Track,
-    ) -> None:
-
+    async def save(self) -> None:
         await self.session.commit()
 
-    async def update_last_price(
-        self,
-        track: Track,
-        price: int,
-    ) -> None:
-
-        track.last_price = price
-
-        await self.session.commit()
-    
     async def get_user_tracks(
         self,
         telegram_id: int,
@@ -83,13 +64,11 @@ class TrackRepository:
             .join(User)
             .where(
                 User.telegram_id == telegram_id,
-                Track.active.is_(True)
+                Track.active.is_(True),
             )
         )
 
-        return list(
-            result.scalars().all()
-        )
+        return list(result.scalars().all())
 
     async def delete(
         self,
@@ -97,9 +76,8 @@ class TrackRepository:
     ) -> None:
 
         await self.session.delete(track)
-
         await self.session.commit()
-    
+
     async def get_by_id(
         self,
         track_id: int,

@@ -55,8 +55,6 @@ class Track(Base):
         nullable=True,
     )
 
-    last_price = mapped_column(Integer, nullable=True)
-
     status = mapped_column(
         Enum(TrackStatus, name="trackstatus"),
         default=TrackStatus.UNKNOWN,
