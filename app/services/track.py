@@ -31,13 +31,37 @@ class TrackService:
     async def delete_track(
         self,
         track_id: int,
+        telegram_id: int,
     ) -> bool:
 
-        track = await self.repository.get_by_id(track_id)
+        track = await self.repository.get_user_track(
+            track_id,
+            telegram_id,
+        )
 
         if track is None:
             return False
 
         await self.repository.delete(track)
+
+        return True
+
+    async def update_target_price(
+        self,
+        track_id: int,
+        target_price: int | None,
+    ) -> bool:
+
+        track = await self.repository.get_by_id(
+            track_id
+        )
+
+        if track is None:
+            return False
+
+        await self.repository.update_target_price(
+            track,
+            target_price,
+        )
 
         return True

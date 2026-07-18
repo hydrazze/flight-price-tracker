@@ -99,3 +99,32 @@ class TrackRepository:
         self.session.add_all(tracks)
 
         await self.session.commit()
+    
+    async def update_target_price(
+        self,
+        track: Track,
+        target_price: int | None,
+    ):
+
+        track.target_price = target_price
+
+        await self.session.commit()
+
+        await self.session.refresh(track)
+    
+    async def get_user_track(
+        self,
+        track_id: int,
+        telegram_id: int,
+    ):
+        result = await self.session.execute(
+            select(Track)
+            .join(User)
+            .where(
+                Track.id == track_id,
+                User.telegram_id == telegram_id,
+                Track.active.is_(True),
+            )
+        )
+
+        return result.scalar_one_or_none()

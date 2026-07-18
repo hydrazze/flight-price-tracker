@@ -1,4 +1,5 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import InlineKeyboardButton
 
 from app.models.track import Track
 
@@ -26,33 +27,30 @@ def tracks_keyboard(
 
 
 
-def track_detail_keyboard(
-    track_id: int,
-):
+def track_detail_keyboard(track_id: int):
 
     builder = InlineKeyboardBuilder()
 
-
-    builder.button(
-        text="✏️ Изменить",
-        callback_data=f"edit_track:{track_id}",
+    builder.row(
+        InlineKeyboardButton(
+            text="✏️ Изменить цену",
+            callback_data=f"edit_target_price:{track_id}",
+        )
     )
 
-
-    builder.button(
-        text="❌ Удалить",
-        callback_data=f"delete_track:{track_id}",
+    builder.row(
+        InlineKeyboardButton(
+            text="🗑 Удалить",
+            callback_data=f"delete_track:{track_id}",
+        )
     )
 
-
-    builder.button(
-        text="⬅️ Назад",
-        callback_data="back_to_tracks",
+    builder.row(
+        InlineKeyboardButton(
+            text="⬅️ Назад",
+            callback_data="back_to_tracks",
+        )
     )
-
-
-    builder.adjust(2, 1)
-
 
     return builder.as_markup()
 

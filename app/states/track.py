@@ -6,3 +6,5 @@ class TrackState(StatesGroup):
     waiting_destination = State()
     waiting_date = State()
     waiting_target_price = State()
+
+    editing_target_price = State()

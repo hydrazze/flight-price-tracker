@@ -3,6 +3,9 @@ from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from aiogram.fsm.context import FSMContext
+from app.states.track import TrackState
+
 from app.repositories.track import TrackRepository
 from app.services.track import TrackService
 
@@ -242,7 +245,8 @@ async def confirm_delete(
 
 
     deleted = await service.delete_track(
-        track_id
+        track_id,
+        callback.from_user.id,
     )
 
 
@@ -260,3 +264,154 @@ async def confirm_delete(
 
 
     await callback.answer()
+
+
+@router.callback_query(
+    lambda c: c.data.startswith("edit_target_price:")
+)
+async def edit_target_price(
+    callback: CallbackQuery,
+    state: FSMContext,
+):
+
+    track_id = int(
+        callback.data.split(":")[1]
+    )
+
+    await state.update_data(
+        track_id=track_id
+    )
+
+    await state.set_state(
+        TrackState.editing_target_price
+    )
+
+    await callback.message.edit_text(
+        "Введите новую целевую цену.\n\n"
+        "Например:\n"
+        "7000\n\n"
+        "Или отправьте '-' чтобы убрать целевую цену."
+    )
+
+    await callback.answer()
+
+
+@router.message(
+    TrackState.editing_target_price
+)
+async def process_new_target_price(
+    message: Message,
+    state: FSMContext,
+    session: AsyncSession,
+):
+
+    data = await state.get_data()
+
+    track_id = data["track_id"]
+
+
+    if message.text == "-":
+
+        target_price = None
+
+    else:
+
+        try:
+            target_price = int(message.text)
+
+        except ValueError:
+
+            await message.answer(
+                "❌ Введите число или '-'."
+            )
+
+            return
+
+
+    repository = TrackRepository(session)
+
+
+    track = await repository.get_user_track(
+        track_id=track_id,
+        telegram_id=message.from_user.id,
+    )
+
+
+    if track is None:
+
+        await message.answer(
+            "❌ Отслеживание не найдено."
+        )
+
+        await state.clear()
+
+        return
+
+
+    service = TrackService(session)
+
+
+    updated = await service.update_target_price(
+        track_id=track_id,
+        target_price=target_price,
+    )
+
+
+    await state.clear()
+
+
+    if not updated:
+
+        await message.answer(
+            "❌ Не удалось изменить цену."
+        )
+
+        return
+
+
+    # обновляем объект для отображения
+    track.target_price = target_price
+
+
+    if track.status.value == "available":
+
+        status = "✅ Рейсы найдены"
+
+    elif track.status.value == "not_found":
+
+        status = "❌ Рейсы не найдены"
+
+    elif track.status.value == "error":
+
+        status = "⚠️ Ошибка проверки"
+
+    else:
+
+        status = "⏳ Ожидает проверки"
+
+
+    text = (
+        "✅ Целевая цена обновлена!\n\n"
+        f"✈️ {track.origin} → {track.destination}\n\n"
+        f"📅 Дата: {track.departure_date}\n"
+        f"💰 Сейчас: {track.last_price or 'нет данных'} ₽\n"
+        f"🎯 Цель: "
+        f"{target_price if target_price else 'не указана'} ₽\n"
+        f"{status}\n"
+    )
+
+
+    if track.last_checked_at:
+
+        text += (
+            f"🕒 Проверено: "
+            f"{track.last_checked_at.strftime('%d.%m.%Y %H:%M')}"
+        )
+
+
+    await message.answer(
+        text,
+        reply_markup=track_detail_keyboard(
+            track.id
+        ),
+    )
