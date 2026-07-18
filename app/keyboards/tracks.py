@@ -93,3 +93,14 @@ def delete_confirm_keyboard(
 
 
     return builder.as_markup()
+
+def archive_keyboard():
+
+    builder = InlineKeyboardBuilder()
+
+    builder.button(
+        text="⬅️ Назад",
+        callback_data="back_to_tracks",
+    )
+
+    return builder.as_markup()

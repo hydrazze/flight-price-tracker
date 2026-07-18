@@ -1,32 +1,22 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from aiogram import Router
-from aiogram.filters import Command
 from aiogram.types import Message
 
-from app.services.user import UserService
+from app.keyboards.main import main_keyboard
 
 
 router = Router()
 
 
-@router.message(Command("start"))
-async def start_handler(
-    message: Message,
-    session: AsyncSession,
-) -> None:
+@router.message(lambda message: message.text == "/start")
+async def start_handler(message: Message):
+    text = """
+<b>✈️ Flight Price Tracker</b>
 
-    user_service = UserService(session)
+Отслеживаю цены на авиабилеты и присылаю уведомления, когда они падают.
 
-    await user_service.get_or_create(
-        telegram_id=message.from_user.id,
-        username=message.from_user.username,
-        first_name=message.from_user.first_name,
-        last_name=message.from_user.last_name,
-    )
-
-    await message.answer(
-        "Привет! 👋\n\n"
-        "Я Flight Price Tracker.\n"
-        "Я помогу отслеживать стоимость авиабилетов."
-    )
+<code>/track</code>   — начать отслеживание
+<code>/tracks</code>  — мои отслеживания
+<code>/archive</code> — история поездок
+<code>/help</code>    — все возможности
+"""
+    await message.answer(text, reply_markup=main_keyboard)

@@ -6,3 +6,4 @@ class TrackStatus(str, Enum):
     AVAILABLE = "available"
     NOT_FOUND = "not_found"
     ERROR = "error"
+    ARCHIVED = "archived"

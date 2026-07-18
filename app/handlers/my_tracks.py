@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.states.track import TrackState
 
+from app.utils.track_formatter import format_archive_track
 
 from app.repositories.track import TrackRepository
 from app.repositories.price_history import PriceHistoryRepository
@@ -541,4 +542,42 @@ async def check_track_now(
         reply_markup=track_detail_keyboard(
             track.id
         ),
+    )
+
+
+@router.message(Command("archive"))
+async def archive_handler(
+    message: Message,
+    session: AsyncSession,
+):
+
+    repository = TrackRepository(session)
+
+    tracks = await repository.get_user_archive(
+        telegram_id=message.from_user.id
+    )
+
+
+    if not tracks:
+
+        await message.answer(
+            "📦 Архив пуст."
+        )
+
+        return
+
+
+    text = "📦 Архив отслеживаний:\n\n"
+
+
+    for track in tracks:
+
+        text += (
+            format_archive_track(track)
+            + "\n"
+        )
+
+
+    await message.answer(
+        text
     )

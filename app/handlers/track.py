@@ -2,7 +2,7 @@ from datetime import date
 
 from aiogram import Router
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
 from app.states.track import TrackState
@@ -12,7 +12,6 @@ from app.utils.date_parser import parse_date
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.track import TrackService
-
 from app.services.user import UserService
 
 from app.services.city_resolver import resolver
@@ -26,87 +25,128 @@ async def track_start(
     message: Message,
     state: FSMContext,
 ) -> None:
+
     await state.set_state(
         TrackState.waiting_origin
     )
 
     await message.answer(
-        "Введите город отправления:"
+        "✈️ Введите город отправления:"
     )
+
+
+
+@router.callback_query(
+    lambda c: c.data == "create_track"
+)
+async def create_track_button(
+    callback: CallbackQuery,
+    state: FSMContext,
+):
+
+    await state.set_state(
+        TrackState.waiting_origin
+    )
+
+    await callback.message.answer(
+        "✈️ Введите город отправления:"
+    )
+
+    await callback.answer()
+
+
 
 @router.message(TrackState.waiting_origin)
 async def process_origin(
     message: Message,
     state: FSMContext,
-) -> None:
+):
 
-    origin = resolver.resolve(message.text)
+    origin = resolver.resolve(
+        message.text
+    )
+
 
     if origin is None:
+
         await message.answer(
-            "Не удалось найти аэропорт.\n"
-            "Введите город или код аэропорта, например:\n"
-            "Москва или MOW"
+            "❌ Не удалось найти аэропорт.\n\n"
+            "Введите город или код аэропорта.\n"
+            "Например: Москва или MOW"
         )
+
         return
+
 
     await state.update_data(
         origin=origin
     )
 
+
     await state.set_state(
         TrackState.waiting_destination
     )
 
+
     await message.answer(
-        "Введите город назначения:"
+        "🌎 Введите город назначения:"
     )
+
+
 
 @router.message(TrackState.waiting_destination)
 async def process_destination(
     message: Message,
     state: FSMContext,
-) -> None:
-    destination = resolver.resolve(message.text)
+):
+
+    destination = resolver.resolve(
+        message.text
+    )
+
 
     if destination is None:
+
         await message.answer(
-            "❌ Не удалось найти такой город.\n\n"
-            "Попробуйте написать, например:\n"
-            "Москва\n"
-            "Казань\n"
-            "Стамбул"
+            "❌ Не удалось найти такой город."
         )
+
         return
+
 
     await state.update_data(
         destination=destination
     )
 
+
     await state.set_state(
         TrackState.waiting_date
     )
 
+
     await message.answer(
-        "Введите дату вылета (DD-MM-YYYY):\n\n"
+        "📅 Введите дату вылета:\n\n"
+        "Формат: DD-MM-YYYY\n"
         "Например: 30-08-2026"
     )
+
+
 
 @router.message(TrackState.waiting_date)
 async def process_date(
     message: Message,
     state: FSMContext,
-    ) -> None:
+):
 
-    departure_date = parse_date(message.text)
+    departure_date = parse_date(
+        message.text
+    )
 
 
     if departure_date is None:
 
         await message.answer(
-            "❌ Неверный формат даты.\n\n"
-            "Используйте DD-MM-YYYY.\n"
-            "Например: 30-08-2026"
+            "❌ Неверный формат даты."
         )
 
         return
@@ -115,80 +155,68 @@ async def process_date(
     if departure_date <= date.today():
 
         await message.answer(
-            "❌ Дата вылета должна быть в будущем.\n\n"
-            "Введите другую дату:"
+            "❌ Дата должна быть в будущем."
         )
 
         return
+
 
     await state.update_data(
         departure_date=departure_date
     )
 
+
     await state.set_state(
         TrackState.waiting_target_price
     )
 
+
     await message.answer(
-        "Введите желаемую цену в рублях.\n\n"
-        "Например:\n"
-        "15000\n\n"
-        'Или отправьте "-" для отслеживания любых изменений цены.'
+        "💰 Введите желаемую цену:\n\n"
+        "Например: 15000\n\n"
+        "Или отправьте '-' чтобы получать любые изменения цены."
     )
+
+
 
 @router.message(TrackState.waiting_target_price)
 async def process_target_price(
     message: Message,
     state: FSMContext,
     session: AsyncSession,
-) -> None:
+):
 
     data = await state.get_data()
 
 
-    target_price: int | None = None
+    target_price = None
 
 
     if message.text != "-":
 
         try:
-
-            target_price = int(message.text)
+            target_price = int(
+                message.text
+            )
 
         except ValueError:
 
             await message.answer(
-                "❌ Цена должна быть числом.\n\n"
-                "Например: 15000\n\n"
-                "Или отправьте '-' для отслеживания любых изменений цены."
+                "❌ Цена должна быть числом."
             )
 
             return
 
 
-        if target_price <= 0:
 
-            await message.answer(
-                "❌ Цена должна быть больше 0."
-            )
-
-            return
+    service = TrackService(
+        session
+    )
 
 
-        if target_price > 500000:
-
-            await message.answer(
-                "❌ Слишком большая цена.\n"
-                "Введите значение до 500000 ₽."
-            )
-
-            return
-
-
-    service = TrackService(session)
-
-
-    user_service = UserService(session)
+    user_service = UserService(
+        session
+    )
 
 
     user = await user_service.get_by_telegram_id(
@@ -211,10 +239,7 @@ async def process_target_price(
     if track is None:
 
         await message.answer(
-            "❌ Такое отслеживание уже существует.\n\n"
-            f"✈️ {data['origin']} → {data['destination']}\n"
-            f"📅 Дата: {data['departure_date'].strftime('%d-%m-%Y')}\n\n"
-            "Изменить целевую цену можно через карточку трека."
+            "❌ Такое отслеживание уже существует."
         )
 
         return

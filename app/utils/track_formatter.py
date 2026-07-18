@@ -60,3 +60,12 @@ def format_tracks_list(
 
 
     return text
+
+def format_archive_track(track):
+
+    return (
+        f"✈️ {track.origin} → {track.destination}\n"
+        f"📅 Дата вылета: "
+        f"{track.departure_date.strftime('%d-%m-%Y')}\n"
+        f"🛫 Рейс состоялся\n"
+    )
