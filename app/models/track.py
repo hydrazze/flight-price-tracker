@@ -1,8 +1,10 @@
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, func, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.enums import TrackStatus
 
 from app.database.base import Base
 
@@ -53,9 +55,28 @@ class Track(Base):
         nullable=True,
     )
 
+    last_price = mapped_column(Integer, nullable=True)
+
+    status = mapped_column(
+        Enum(TrackStatus, name="trackstatus"),
+        default=TrackStatus.UNKNOWN,
+        nullable=False,
+    )
+
+    last_checked_at = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
     active: Mapped[bool] = mapped_column(
         Boolean,
         default=True,
+        nullable=False,
+    )
+
+    no_flights_notified: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
         nullable=False,
     )
 

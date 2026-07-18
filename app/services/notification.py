@@ -28,3 +28,20 @@ class NotificationService:
                 f"Целевая цена: {target_price} руб."
             ),
         )
+    async def send_no_flights_alert(
+        self,
+        telegram_id: int,
+        origin: str,
+        destination: str,
+        departure_date,
+    ) -> None:
+
+        await self.bot.send_message(
+            chat_id=telegram_id,
+            text=(
+                "❌ Рейсы не найдены\n\n"
+                f"✈️ {origin} → {destination}\n"
+                f"📅 Дата: {departure_date}\n\n"
+                "Проверьте направление или дату вылета."
+            ),
+        )

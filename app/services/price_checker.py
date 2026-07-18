@@ -33,14 +33,39 @@ class PriceCheckerService:
             )
 
             if not response.data:
-                continue
 
+                if not track.no_flights_notified:
+
+                    await self.notification_service.send_no_flights_alert(
+                        telegram_id=track.user.telegram_id,
+                        origin=track.origin,
+                        destination=track.destination,
+                        departure_date=track.departure_date,
+                    )
+
+                    track.no_flights_notified = True
+
+                    await self.repository.save(track)
+
+                continue
 
             cheapest_price = min(
                 flight.price
                 for flight in response.data
             )
 
+            if not track.no_flights_notified:
+
+                track.no_flights_notified = True
+
+                await self.repository.save(track)
+
+                await self.notification_service.send_no_flights_alert(
+                    telegram_id=track.user.telegram_id,
+                    origin=track.origin,
+                    destination=track.destination,
+                    departure_date=track.departure_date,
+                )
 
             print(
                 f"{track.origin} -> {track.destination}: "

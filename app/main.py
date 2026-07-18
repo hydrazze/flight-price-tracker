@@ -2,7 +2,6 @@ import asyncio
 
 from app.bot import bot, dispatcher
 from app.handlers import router
-from app.scheduler.checker import run_price_checker
 from app.scheduler.checker import scheduler_loop
 
 async def main() -> None:
