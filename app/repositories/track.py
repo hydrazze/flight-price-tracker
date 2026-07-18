@@ -90,3 +90,12 @@ class TrackRepository:
         )
 
         return result.scalar_one_or_none()
+    
+    async def save_all(
+        self,
+        tracks: list[Track],
+    ) -> None:
+
+        self.session.add_all(tracks)
+
+        await self.session.commit()
