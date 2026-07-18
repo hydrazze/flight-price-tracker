@@ -42,7 +42,6 @@ class PriceCheckerService:
 
         # Есть целевая цена
 
-        # Первый найденный билет
         if old_price is None:
             return new_price <= target_price
 
@@ -58,7 +57,6 @@ class PriceCheckerService:
 
 
         # Было выше и стало выше
-        # например 9000 -> 10000
         return False
 
 
@@ -68,94 +66,124 @@ class PriceCheckerService:
 
         for track in tracks:
 
-            try:
-                response = await self.client.get_prices_for_dates(
-                    origin=track.origin,
-                    destination=track.destination,
-                    departure_date=track.departure_date,
-                )
+            await self._check_track(track)
 
 
-                if not response.data:
-
-                    track.status = TrackStatus.NOT_FOUND
-
-                    track.last_checked_at = datetime.now(
-                        timezone.utc
-                    )
+        await self.repository.save_all(tracks)
 
 
-                    if not track.no_flights_notified:
 
-                        await self.notification_service.send_no_flights_alert(
-                            telegram_id=track.user.telegram_id,
-                            origin=track.origin,
-                            destination=track.destination,
-                            departure_date=track.departure_date,
-                        )
+    async def check_single_track(
+        self,
+        track_id: int,
+    ) -> bool:
 
-                        track.no_flights_notified = True
+        track = await self.repository.get_by_id(
+            track_id
+        )
 
-
-                    continue
-
-
-                cheapest_price = min(
-                    flight.price
-                    for flight in response.data
-                )
+        if track is None:
+            return False
 
 
-                old_price = track.last_price
+        await self._check_track(track)
 
 
-                track.status = TrackStatus.AVAILABLE
+        await self.repository.save_all(
+            [track]
+        )
+
+        return True
+
+
+
+    async def _check_track(
+        self,
+        track,
+    ) -> None:
+
+        try:
+
+            response = await self.client.get_prices_for_dates(
+                origin=track.origin,
+                destination=track.destination,
+                departure_date=track.departure_date,
+            )
+
+
+            if not response.data:
+
+                track.status = TrackStatus.NOT_FOUND
 
                 track.last_checked_at = datetime.now(
                     timezone.utc
                 )
 
 
-                # Проверяем надо ли уведомлять
-                if self.should_notify(
-                    old_price=old_price,
-                    new_price=cheapest_price,
-                    target_price=track.target_price,
-                ):
+                if not track.no_flights_notified:
 
-                    await self.notification_service.send_price_alert(
+                    await self.notification_service.send_no_flights_alert(
                         telegram_id=track.user.telegram_id,
                         origin=track.origin,
                         destination=track.destination,
                         departure_date=track.departure_date,
-                        old_price=track.last_price,
-                        new_price=cheapest_price,
-                        target_price=track.target_price,
                     )
 
-
-                # Цена изменилась
-                if old_price != cheapest_price:
-
-                    track.last_price = cheapest_price
+                    track.no_flights_notified = True
 
 
-                    await self.price_history_repository.create(
-                        track_id=track.id,
-                        price=cheapest_price,
-                    )
+                return
 
 
-            except Exception:
 
-                track.status = TrackStatus.ERROR
+            cheapest_price = min(
+                flight.price
+                for flight in response.data
+            )
 
-                track.last_checked_at = datetime.now(
-                    timezone.utc
 
+            old_price = track.last_price
+
+
+            track.status = TrackStatus.AVAILABLE
+
+            track.last_checked_at = datetime.now(
+                timezone.utc
+            )
+
+
+            if self.should_notify(
+                old_price=old_price,
+                new_price=cheapest_price,
+                target_price=track.target_price,
+            ):
+
+                await self.notification_service.send_price_alert(
+                    telegram_id=track.user.telegram_id,
+                    origin=track.origin,
+                    destination=track.destination,
+                    departure_date=track.departure_date,
+                    old_price=old_price,
+                    new_price=cheapest_price,
+                    target_price=track.target_price,
                 )
 
-                continue
+
+            if old_price != cheapest_price:
+
+                track.last_price = cheapest_price
 
 
-        await self.repository.save_all(tracks)
+                await self.price_history_repository.create(
+                    track_id=track.id,
+                    price=cheapest_price,
+                )
+
+
+        except Exception:
+
+            track.status = TrackStatus.ERROR
+
+            track.last_checked_at = datetime.now(
+                timezone.utc
+            )

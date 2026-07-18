@@ -50,18 +50,18 @@ class TrackService:
         self,
         track_id: int,
         target_price: int | None,
-    ) -> bool:
+    ):
 
         track = await self.repository.get_by_id(
             track_id
         )
 
         if track is None:
-            return False
+            return None
 
-        await self.repository.update_target_price(
+        updated_track = await self.repository.update_target_price(
             track,
             target_price,
         )
 
-        return True
+        return updated_track

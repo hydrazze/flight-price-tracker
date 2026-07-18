@@ -47,7 +47,7 @@ def format_track(track):
     return (
         f"✈️ {track.origin} → {track.destination}\n\n"
         f"📅 Дата: {track.departure_date}\n"
-        f"💰 Цель: "
+        f"🎯 Цель: "
         f"{track.target_price or 'не указана'} ₽\n"
         f"📉 Сейчас: "
         f"{track.last_price or 'нет данных'} ₽\n"
@@ -87,7 +87,7 @@ async def my_tracks_handler(
         text += (
             f"✈️ {track.origin} → {track.destination}\n"
             f"📅 {track.departure_date}\n"
-            f"💰 Цель: "
+            f"🎯 Цель: "
             f"{track.target_price or 'не указана'} ₽\n"
             f"📉 Сейчас: "
             f"{track.last_price or 'нет данных'} ₽\n\n"
@@ -185,7 +185,7 @@ async def back_to_tracks(
         text += (
             f"✈️ {track.origin} → {track.destination}\n"
             f"📅 {track.departure_date}\n"
-            f"💰 Цель: "
+            f"🎯 Цель: "
             f"{track.target_price or 'не указана'} ₽\n"
             f"📉 Сейчас: "
             f"{track.last_price or 'нет данных'} ₽\n\n"
@@ -328,13 +328,16 @@ async def process_new_target_price(
             return
 
 
-    repository = TrackRepository(session)
+    service = TrackService(session)
 
 
-    track = await repository.get_user_track(
-        track_id=track_id,
-        telegram_id=message.from_user.id,
+    track = await service.update_target_price(
+        track_id,
+        target_price,
     )
+
+
+    await state.clear()
 
 
     if track is None:
@@ -343,34 +346,7 @@ async def process_new_target_price(
             "❌ Отслеживание не найдено."
         )
 
-        await state.clear()
-
         return
-
-
-    service = TrackService(session)
-
-
-    updated = await service.update_target_price(
-        track_id=track_id,
-        target_price=target_price,
-    )
-
-
-    await state.clear()
-
-
-    if not updated:
-
-        await message.answer(
-            "❌ Не удалось изменить цену."
-        )
-
-        return
-
-
-    # обновляем объект для отображения
-    track.target_price = target_price
 
 
     if track.status.value == "available":
@@ -396,7 +372,7 @@ async def process_new_target_price(
         f"📅 Дата: {track.departure_date}\n"
         f"💰 Сейчас: {track.last_price or 'нет данных'} ₽\n"
         f"🎯 Цель: "
-        f"{target_price if target_price else 'не указана'} ₽\n"
+        f"{track.target_price if track.target_price is not None else 'не указана'} ₽"
         f"{status}\n"
     )
 

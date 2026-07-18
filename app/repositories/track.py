@@ -104,13 +104,15 @@ class TrackRepository:
         self,
         track: Track,
         target_price: int | None,
-    ):
+    ) -> Track:
 
         track.target_price = target_price
 
         await self.session.commit()
 
         await self.session.refresh(track)
+
+        return track
     
     async def get_user_track(
         self,

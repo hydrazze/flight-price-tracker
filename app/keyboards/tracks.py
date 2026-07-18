@@ -33,7 +33,14 @@ def track_detail_keyboard(track_id: int):
 
     builder.row(
         InlineKeyboardButton(
-            text="✏️ Изменить цену",
+            text="🔄 Проверить сейчас",
+            callback_data=f"check_track:{track_id}",
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text="🎯 Изменить цель",
             callback_data=f"edit_target_price:{track_id}",
         )
     )
