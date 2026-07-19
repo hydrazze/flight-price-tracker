@@ -7,6 +7,8 @@ from app.repositories.price_history import PriceHistoryRepository
 from app.services.notification import NotificationService
 from app.models.enums import TrackStatus
 
+from app.logging.logger import logger
+
 
 class PriceCheckerService:
 
@@ -53,9 +55,15 @@ class PriceCheckerService:
         return False
 
 
+
     async def check_prices(
         self,
     ) -> None:
+
+        logger.info(
+            "Checking active tracks started"
+        )
+
 
         expired_tracks = await self.repository.archive_expired_tracks(
             today=date.today()
@@ -75,6 +83,11 @@ class PriceCheckerService:
         tracks = await self.repository.get_active_tracks()
 
 
+        logger.info(
+            f"Found {len(tracks)} active tracks"
+        )
+
+
         for track in tracks:
 
             await self._check_track(
@@ -83,6 +96,12 @@ class PriceCheckerService:
 
 
         await self.repository.save()
+
+
+        logger.info(
+            "Checking active tracks finished"
+        )
+
 
 
     async def check_one_track(
@@ -94,7 +113,13 @@ class PriceCheckerService:
             track_id
         )
 
+
         if track is None:
+
+            logger.warning(
+                f"Track #{track_id} not found"
+            )
+
             return
 
 
@@ -106,12 +131,18 @@ class PriceCheckerService:
         await self.repository.save()
 
 
+
     async def _check_track(
         self,
         track,
     ) -> None:
 
         try:
+
+            logger.info(
+                f"Checking track #{track.id}"
+            )
+
 
             response = await self.client.get_prices_for_dates(
                 origin=track.origin,
@@ -141,7 +172,12 @@ class PriceCheckerService:
                     track.no_flights_notified = True
 
 
+                logger.info(
+                    f"No flights found for track #{track.id}"
+                )
+
                 return
+
 
 
             cheapest_price = min(
@@ -188,11 +224,17 @@ class PriceCheckerService:
                 )
 
 
-        except Exception as e:
-
-            print(
-                f"Track check error #{track.id}: {e}"
+            logger.info(
+                f"Track #{track.id} checked. Price: {cheapest_price}"
             )
+
+
+        except Exception:
+
+            logger.exception(
+                f"Track check error #{track.id}"
+            )
+
 
             track.status = TrackStatus.ERROR
 

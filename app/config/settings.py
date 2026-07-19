@@ -3,9 +3,15 @@ from pydantic import SecretStr
 
 
 class Settings(BaseSettings):
+
     bot_token: SecretStr
+
     travelpayouts_api_key: SecretStr
+
     database_url: str
+
+    price_check_interval: int = 3600
+
 
     model_config = SettingsConfigDict(
         env_file=".env",

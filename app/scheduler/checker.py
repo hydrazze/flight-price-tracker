@@ -9,6 +9,10 @@ from app.services.price_checker import PriceCheckerService
 from app.services.notification import NotificationService
 from app.repositories.price_history import PriceHistoryRepository
 
+from app.config.settings import settings
+from app.logging.logger import logger
+
+
 
 async def run_price_checker(
     bot: Bot,
@@ -20,9 +24,11 @@ async def run_price_checker(
             session
         )
 
+
         history_repository = PriceHistoryRepository(
             session
         )
+
 
         client = TravelPayoutsClient()
 
@@ -33,23 +39,32 @@ async def run_price_checker(
 
 
         service = PriceCheckerService(
-            repository,
-            client,
-            notification_service,
-            history_repository,
+            repository=repository,
+            client=client,
+            notification_service=notification_service,
+            price_history_repository=history_repository,
         )
 
 
-        await service.check_prices()
+        try:
+
+            await service.check_prices()
 
 
-        await client.close()
+        finally:
+
+            await client.close()
 
 
 
 async def scheduler_loop(
     bot: Bot,
 ):
+
+    logger.info(
+        "Scheduler started"
+    )
+
 
     while True:
 
@@ -61,16 +76,21 @@ async def scheduler_loop(
 
 
         except asyncio.CancelledError:
+
+            logger.info(
+                "Scheduler stopped"
+            )
+
             raise
 
 
-        except Exception as e:
+        except Exception:
 
-            print(
-                f"Scheduler error: {e}"
+            logger.exception(
+                "Scheduler error"
             )
 
 
         await asyncio.sleep(
-            60
+            settings.price_check_interval
         )
