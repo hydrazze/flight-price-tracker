@@ -14,9 +14,9 @@ async def start_handler(message: Message):
 
 Отслеживаю цены на авиабилеты и присылаю уведомления, когда они падают.
 
-<code>/track</code>   — начать отслеживание
-<code>/tracks</code>  — мои отслеживания
-<code>/archive</code> — история поездок
-<code>/help</code>    — все возможности
+/track   — начать отслеживание
+/tracks  — мои отслеживания
+/archive — история поездок
+/help    — все возможности
 """
     await message.answer(text, reply_markup=main_keyboard)

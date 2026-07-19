@@ -15,7 +15,7 @@ async def set_bot_commands(
 
         BotCommand(
             command="track",
-            description="✈️ Новое отслеживание",
+            description="✈️ Создать отслеживание",
         ),
 
         BotCommand(
@@ -25,7 +25,7 @@ async def set_bot_commands(
 
         BotCommand(
             command="archive",
-            description="🗄 Архив",
+            description="🗄 Архив поездок",
         ),
 
         BotCommand(

@@ -39,3 +39,9 @@ main_keyboard = InlineKeyboardMarkup(
 
     ]
 )
+
+
+
+def main_menu_keyboard():
+
+    return main_keyboard

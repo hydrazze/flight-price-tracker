@@ -2,11 +2,22 @@ from datetime import date
 
 from aiogram import Bot
 
+from app.services.city_resolver import resolver
+
 
 class NotificationService:
 
     def __init__(self, bot: Bot):
         self.bot = bot
+
+    def _format_route(self, origin: str, destination: str, departure_date: date) -> str:
+        origin_name = resolver.get_city_name(origin)
+        destination_name = resolver.get_city_name(destination)
+
+        return (
+            f"✈️ {origin_name} ({origin.upper()}) → {destination_name} ({destination.upper()})\n"
+            f"📅 {departure_date.strftime('%d.%m.%Y')}"
+        )
 
     async def send_price_alert(
         self,
@@ -19,14 +30,9 @@ class NotificationService:
         target_price: int | None,
     ) -> None:
 
-        route = (
-            f"✈️ {origin} → {destination} "
-            f"({departure_date.strftime('%d.%m.%Y')})"
-        )
+        route = self._format_route(origin, destination, departure_date)
 
-        # Отслеживание без целевой цены
         if target_price is None:
-
             text = (
                 "💸 Цена изменилась!\n\n"
                 f"{route}\n\n"
@@ -52,9 +58,7 @@ class NotificationService:
                     f"💰 Цена: {new_price} ₽"
                 )
 
-        # Есть целевая цена
         else:
-
             if new_price <= target_price:
                 title = "🎯 Цена достигла вашей цели!"
             else:
@@ -93,12 +97,13 @@ class NotificationService:
         departure_date: date,
     ) -> None:
 
+        route = self._format_route(origin, destination, departure_date)
+
         await self.bot.send_message(
             chat_id=telegram_id,
             text=(
                 "😔 Не удалось найти рейсы.\n\n"
-                f"✈️ {origin} → {destination} "
-                f"({departure_date.strftime('%d.%m.%Y')})"
+                f"{route}"
             ),
         )
 
@@ -110,13 +115,13 @@ class NotificationService:
         departure_date: date,
     ) -> None:
 
+        route = self._format_route(origin, destination, departure_date)
+
         await self.bot.send_message(
             chat_id=telegram_id,
             text=(
                 "🛫 Отслеживание завершено\n\n"
-                f"✈️ {origin} → {destination}\n"
-                f"📅 Дата вылета: "
-                f"{departure_date.strftime('%d-%m-%Y')}\n\n"
+                f"{route}\n\n"
                 "Рейс уже состоялся.\n"
                 "Отслеживание автоматически отключено."
             ),

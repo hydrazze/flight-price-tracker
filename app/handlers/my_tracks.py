@@ -1,34 +1,33 @@
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
-
 from aiogram.fsm.context import FSMContext
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
-from app.states.track import TrackState
-
-from app.utils.track_formatter import format_archive_track
-
 from app.repositories.track import TrackRepository
 from app.repositories.price_history import PriceHistoryRepository
-
 
 from app.services.track import TrackService
 from app.services.price_checker import PriceCheckerService
 from app.services.notification import NotificationService
 
-
 from app.providers.travelpayouts import TravelPayoutsClient
-
 
 from app.keyboards.tracks import (
     tracks_keyboard,
     track_detail_keyboard,
     delete_confirm_keyboard,
+    archive_keyboard,
 )
 
+from app.states.track import TrackState
+
+from app.utils.track_formatter import (
+    format_track,
+    format_tracks_list,
+    format_archive_track,
+)
 
 from app.bot import bot
 
@@ -36,70 +35,9 @@ from app.bot import bot
 router = Router()
 
 
-
-def get_track_status(track):
-
-    if track.status.value == "available":
-        return "✅ Рейсы найдены"
-
-    elif track.status.value == "not_found":
-        return "❌ Рейсы не найдены"
-
-    elif track.status.value == "error":
-        return "⚠️ Ошибка проверки"
-
-    return "⏳ Ожидает проверки"
-
-
-
-def format_track(track):
-
-    last_checked = (
-        track.last_checked_at.strftime(
-            "%d.%m.%Y %H:%M"
-        )
-        if track.last_checked_at
-        else "нет данных"
-    )
-
-
-    return (
-        f"✈️ {track.origin} → {track.destination}\n\n"
-        f"📅 Дата: {track.departure_date.strftime('%d-%m-%Y')}\n"
-        f"🎯 Цель: "
-        f"{track.target_price if track.target_price is not None else 'не указана'} ₽\n"
-        f"📉 Сейчас: "
-        f"{track.last_price if track.last_price is not None else 'нет данных'} ₽\n"
-        f"{get_track_status(track)}\n"
-        f"🕒 Проверено: {last_checked}"
-    )
-
-
-
-def format_tracks_list(tracks):
-
-    text = "Ваши отслеживания:\n\n"
-
-
-    for track in tracks:
-
-        text += (
-            f"✈️ {track.origin} → {track.destination}\n"
-            f"📅 {track.departure_date.strftime('%d-%m-%Y')}\n"
-            f"🎯 Цель: "
-            f"{track.target_price if track.target_price is not None else 'не указана'} ₽\n"
-            f"📉 Сейчас: "
-            f"{track.last_price if track.last_price is not None else 'нет данных'} ₽\n\n"
-        )
-
-
-    return text
-
-
-
-# ==========================
+# =====================================================
 # /tracks
-# ==========================
+# =====================================================
 
 @router.message(Command("tracks"))
 async def my_tracks_handler(
@@ -109,7 +47,6 @@ async def my_tracks_handler(
 
     repository = TrackRepository(session)
 
-
     tracks = await repository.get_user_tracks(
         telegram_id=message.from_user.id
     )
@@ -118,7 +55,8 @@ async def my_tracks_handler(
     if not tracks:
 
         await message.answer(
-            "У вас нет активных отслеживаний."
+            "📋 <b>Активных отслеживаний нет</b>\n\n"
+            "Создайте первое отслеживание через кнопку ниже ✈️"
         )
 
         return
@@ -128,9 +66,12 @@ async def my_tracks_handler(
         format_tracks_list(tracks),
         reply_markup=tracks_keyboard(tracks),
     )
-# ==========================
-# открыть конкретный трек
-# ==========================
+
+
+
+# =====================================================
+# Открытие карточки трека
+# =====================================================
 
 @router.callback_query(
     lambda c: c.data.startswith("track:")
@@ -156,7 +97,7 @@ async def open_track(
     if track is None:
 
         await callback.answer(
-            "❌ Трек не найден.",
+            "❌ Отслеживание не найдено.",
             show_alert=True,
         )
 
@@ -175,9 +116,9 @@ async def open_track(
 
 
 
-# ==========================
-# назад к списку
-# ==========================
+# =====================================================
+# Назад к списку
+# =====================================================
 
 @router.callback_query(
     lambda c: c.data == "back_to_tracks"
@@ -198,12 +139,13 @@ async def back_to_tracks(
     if not tracks:
 
         await callback.message.edit_text(
-            "У вас нет активных отслеживаний."
+            "📋 <b>Активных отслеживаний нет</b>"
         )
 
         await callback.answer()
 
         return
+
 
 
     await callback.message.edit_text(
@@ -216,9 +158,9 @@ async def back_to_tracks(
 
 
 
-# ==========================
-# удаление трека
-# ==========================
+# =====================================================
+# Удаление
+# =====================================================
 
 @router.callback_query(
     lambda c: c.data.startswith("delete_track:")
@@ -233,7 +175,8 @@ async def delete_track_confirm(
 
 
     await callback.message.edit_text(
-        "❗ Вы уверены, что хотите удалить это отслеживание?",
+        "🗑 <b>Удаление отслеживания</b>\n\n"
+        "Вы уверены, что хотите удалить это направление?",
         reply_markup=delete_confirm_keyboard(
             track_id
         ),
@@ -269,7 +212,8 @@ async def confirm_delete(
     if deleted:
 
         await callback.message.edit_text(
-            "✅ Отслеживание удалено."
+            "✅ <b>Отслеживание удалено</b>\n\n"
+            "Вернуться к списку можно через меню."
         )
 
     else:
@@ -283,9 +227,9 @@ async def confirm_delete(
 
 
 
-# ==========================
-# изменение целевой цены
-# ==========================
+# =====================================================
+# Изменение целевой цены
+# =====================================================
 
 @router.callback_query(
     lambda c: c.data.startswith("edit_target_price:")
@@ -311,10 +255,11 @@ async def edit_target_price(
 
 
     await callback.message.edit_text(
-        "Введите новую целевую цену.\n\n"
+        "🎯 <b>Изменение целевой цены</b>\n\n"
+        "Введите новую цену.\n\n"
         "Например:\n"
-        "7000\n\n"
-        "Или отправьте '-' чтобы убрать целевую цену."
+        "<code>12000</code>\n\n"
+        "Чтобы убрать цель — отправьте <code>-</code>"
     )
 
 
@@ -322,48 +267,38 @@ async def edit_target_price(
 
 
 
-@router.message(TrackState.waiting_target_price)
-async def process_target_price(
+@router.message(
+    TrackState.editing_target_price
+)
+async def process_edit_target_price(
     message: Message,
     state: FSMContext,
     session: AsyncSession,
-) -> None:
+):
 
     data = await state.get_data()
 
-    target_price: int | None = None
+
+    track_id = data.get(
+        "track_id"
+    )
+
+
+    target_price = None
 
 
     if message.text != "-":
 
         try:
-            target_price = int(message.text)
+
+            target_price = int(
+                message.text
+            )
 
         except ValueError:
 
             await message.answer(
-                "❌ Цена должна быть числом.\n\n"
-                "Например: 15000\n"
-                "Или отправьте '-' чтобы отслеживать любые изменения."
-            )
-
-            return
-
-
-        if target_price <= 0:
-
-            await message.answer(
-                "❌ Цена должна быть больше 0 ₽."
-            )
-
-            return
-
-
-        if target_price > 1_000_000:
-
-            await message.answer(
-                "❌ Слишком большая цена.\n"
-                "Введите сумму до 1 000 000 ₽."
+                "❌ Введите число или отправьте '-'."
             )
 
             return
@@ -393,7 +328,7 @@ async def process_target_price(
 
 
     await message.answer(
-        "✅ Целевая цена обновлена!\n\n"
+        "✅ <b>Целевая цена обновлена</b>\n\n"
         + format_track(track),
         reply_markup=track_detail_keyboard(
             track.id
@@ -402,9 +337,9 @@ async def process_target_price(
 
 
 
-# ==========================
-# история цены
-# ==========================
+# =====================================================
+# История цены
+# =====================================================
 
 @router.callback_query(
     lambda c: c.data.startswith("price_history:")
@@ -440,7 +375,9 @@ async def show_price_history(
 
 
 
-    text = "📊 История цены\n\n"
+    text = (
+        "📊 <b>История цены</b>\n\n"
+    )
 
 
     for item in history[:10]:
@@ -463,9 +400,9 @@ async def show_price_history(
 
 
 
-# ==========================
-# ручная проверка цены
-# ==========================
+# =====================================================
+# Проверка одного направления
+# =====================================================
 
 @router.callback_query(
     lambda c: c.data.startswith("check_track:")
@@ -537,13 +474,18 @@ async def check_track_now(
 
 
     await callback.message.edit_text(
-        "✅ Проверка завершена!\n\n"
+        "✅ <b>Проверка завершена</b>\n\n"
         + format_track(track),
         reply_markup=track_detail_keyboard(
             track.id
         ),
     )
 
+
+
+# =====================================================
+# Архив
+# =====================================================
 
 @router.message(Command("archive"))
 async def archive_handler(
@@ -553,6 +495,7 @@ async def archive_handler(
 
     repository = TrackRepository(session)
 
+
     tracks = await repository.get_user_archive(
         telegram_id=message.from_user.id
     )
@@ -561,13 +504,17 @@ async def archive_handler(
     if not tracks:
 
         await message.answer(
-            "📦 Архив пуст."
+            "🗄 <b>Архив пуст</b>\n\n"
+            "Здесь появятся завершенные поездки."
         )
 
         return
 
 
-    text = "📦 Архив отслеживаний:\n\n"
+
+    text = (
+        "🗄 <b>Архив поездок</b>\n\n"
+    )
 
 
     for track in tracks:
@@ -579,5 +526,6 @@ async def archive_handler(
 
 
     await message.answer(
-        text
+        text,
+        reply_markup=archive_keyboard(),
     )

@@ -1,10 +1,21 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 
+from aiogram.fsm.context import FSMContext
+
+from app.states.track import TrackState
+from app.utils.track_formatter import format_tracks_list, format_archive_track
+
+from app.keyboards.main import main_keyboard
+from app.keyboards.tracks import archive_keyboard
+
 from app.database.engine import async_session_maker
+
 from app.repositories.track import TrackRepository
 from app.repositories.price_history import PriceHistoryRepository
+
 from app.providers.travelpayouts import TravelPayoutsClient
+
 from app.services.price_checker import PriceCheckerService
 from app.services.notification import NotificationService
 
@@ -14,20 +25,47 @@ from app.bot import bot
 router = Router()
 
 
-@router.callback_query(F.data == "create_track")
-async def create_track_callback(
+
+@router.callback_query(
+    F.data == "cancel_track"
+)
+async def cancel_track(
     callback: CallbackQuery,
+    state: FSMContext,
 ):
+
+    await state.clear()
+
+
     await callback.message.answer(
-        "✈️ Создание нового отслеживания\n\n"
-        "Введите город отправления:"
+        "❌ Создание отслеживания отменено.",
+        reply_markup=main_keyboard,
+    )
+
+
+    await callback.answer()
+
+
+
+@router.callback_query(F.data == "main_menu")
+async def main_menu_handler(callback: CallbackQuery):
+    await callback.message.edit_text(
+        "✈️ <b>Flight Price Tracker</b>\n\n"
+        "Отслеживаю цены на авиабилеты и присылаю уведомления, когда они падают.\n\n"
+        "/track   — начать отслеживание\n"
+        "/tracks  — мои отслеживания\n"
+        "/archive — история поездок\n"
+        "/help    — все возможности",
+        reply_markup=main_keyboard,
     )
 
     await callback.answer()
 
 
 
-@router.callback_query(F.data == "my_tracks")
+@router.callback_query(
+    F.data == "my_tracks"
+)
 async def my_tracks_callback(
     callback: CallbackQuery,
 ):
@@ -38,6 +76,7 @@ async def my_tracks_callback(
             session
         )
 
+
         tracks = await repository.get_user_tracks(
             telegram_id=callback.from_user.id
         )
@@ -46,27 +85,18 @@ async def my_tracks_callback(
         if not tracks:
 
             await callback.message.answer(
-                "📋 У вас нет активных отслеживаний."
+                "📋 У вас пока нет активных отслеживаний.",
+                reply_markup=main_keyboard,
             )
 
             await callback.answer()
             return
 
 
-        text = "📋 Ваши активные отслеживания:\n\n"
-
-
-        for track in tracks:
-
-            text += (
-                f"✈️ {track.origin} → {track.destination}\n"
-                f"📅 {track.departure_date.strftime('%d.%m.%Y')}\n"
-                f"💰 {track.last_price if track.last_price else 'нет данных'} ₽\n\n"
-            )
-
 
         await callback.message.answer(
-            text
+            format_tracks_list(tracks),
+            reply_markup=main_keyboard,
         )
 
 
@@ -74,7 +104,9 @@ async def my_tracks_callback(
 
 
 
-@router.callback_query(F.data == "archive")
+@router.callback_query(
+    F.data == "archive"
+)
 async def archive_callback(
     callback: CallbackQuery,
 ):
@@ -94,7 +126,8 @@ async def archive_callback(
         if not tracks:
 
             await callback.message.answer(
-                "🗄 Архив пуст."
+                "🗄 Архив пуст.",
+                reply_markup=main_keyboard,
             )
 
             await callback.answer()
@@ -102,33 +135,28 @@ async def archive_callback(
 
 
 
-        text = "🗄 Архив поездок:\n\n"
-
-
-        for track in tracks:
-
-            text += (
-                f"✈️ {track.origin} → {track.destination}\n"
-                f"📅 {track.departure_date.strftime('%d.%m.%Y')}\n\n"
-            )
-
-
-        await callback.message.answer(
-            text
+        text = "🗄 <b>Архив поездок</b>\n\n" + "\n\n".join(
+            format_archive_track(track) for track in tracks
         )
 
+        await callback.message.answer(
+            text,
+            reply_markup=archive_keyboard(),
+        )
 
     await callback.answer()
 
 
 
-@router.callback_query(F.data == "check_prices")
+@router.callback_query(
+    F.data == "check_prices"
+)
 async def check_prices_callback(
     callback: CallbackQuery,
 ):
 
     await callback.message.answer(
-        "🔎 Проверяю цены..."
+        "🔄 Проверяю цены..."
     )
 
 
@@ -137,6 +165,7 @@ async def check_prices_callback(
         repository = TrackRepository(
             session
         )
+
 
         history_repository = PriceHistoryRepository(
             session
@@ -167,7 +196,8 @@ async def check_prices_callback(
 
 
     await callback.message.answer(
-        "✅ Проверка завершена."
+        "✅ Проверка завершена.",
+        reply_markup=main_keyboard,
     )
 
 
@@ -175,25 +205,27 @@ async def check_prices_callback(
 
 
 
-@router.callback_query(F.data == "help")
+@router.callback_query(
+    F.data == "help"
+)
 async def help_callback(
     callback: CallbackQuery,
 ):
 
     await callback.message.answer(
+                """
+        📋 Доступные команды
+
+        ✈️ /track — создать отслеживание
+
+        📡 /tracks — активные направления
+
+        📦 /archive — архив поездок
+
+        🔍 /check — проверить цены сейчас
+
+        <i>По вопросам и предложениям: @hydraze</i>
         """
-📋 Доступные команды
-
-✈️ /track — создать отслеживание
-
-📡 /tracks — активные направления
-
-📦 /archive — архив поездок
-
-🔍 /check — проверить цены сейчас
-
-<i>По вопросам и предложениям: @hydraze</i>
-"""
     )
 
 

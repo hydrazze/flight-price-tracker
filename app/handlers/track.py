@@ -5,33 +5,55 @@ from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.states.track import TrackState
 
 from app.utils.date_parser import parse_date
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.services.track import TrackService
 from app.services.user import UserService
-
 from app.services.city_resolver import resolver
+
+from app.keyboards.cancel import cancel_keyboard
+from app.keyboards.main import main_keyboard
 
 
 router = Router()
 
 
-@router.message(Command("track"))
-async def track_start(
+
+async def start_track_creation(
     message: Message,
     state: FSMContext,
-) -> None:
+):
 
     await state.set_state(
         TrackState.waiting_origin
     )
 
+
     await message.answer(
-        "✈️ Введите город отправления:"
+        "✈️ <b>Новое отслеживание</b>\n\n"
+        "Введите город отправления.\n\n"
+        "Например:\n"
+        "Москва",
+        reply_markup=cancel_keyboard,
+    )
+
+
+
+@router.message(
+    Command("track")
+)
+async def track_start(
+    message: Message,
+    state: FSMContext,
+):
+
+    await start_track_creation(
+        message,
+        state,
     )
 
 
@@ -48,9 +70,15 @@ async def create_track_button(
         TrackState.waiting_origin
     )
 
+
     await callback.message.answer(
-        "✈️ Введите город отправления:"
+        "✈️ <b>Новое отслеживание</b>\n\n"
+        "Введите город отправления.\n\n"
+        "Например:\n"
+        "Москва",
+        reply_markup=cancel_keyboard,
     )
+
 
     await callback.answer()
 
@@ -61,35 +89,28 @@ async def process_origin(
     message: Message,
     state: FSMContext,
 ):
-
-    origin = resolver.resolve(
-        message.text
-    )
-
+    origin = resolver.resolve(message.text)
 
     if origin is None:
-
         await message.answer(
             "❌ Не удалось найти аэропорт.\n\n"
             "Введите город или код аэропорта.\n"
-            "Например: Москва или MOW"
+            "Например: Москва или MOW",
+            reply_markup=cancel_keyboard,
         )
-
         return
 
-
     await state.update_data(
-        origin=origin
+        origin=origin["code"],
+        origin_name=origin["city"],
     )
 
-
-    await state.set_state(
-        TrackState.waiting_destination
-    )
-
+    await state.set_state(TrackState.waiting_destination)
 
     await message.answer(
-        "🌎 Введите город назначения:"
+        "🌎 <b>Город назначения</b>\n\n"
+        "Введите город, куда хотите полететь.",
+        reply_markup=cancel_keyboard,
     )
 
 
@@ -99,40 +120,35 @@ async def process_destination(
     message: Message,
     state: FSMContext,
 ):
-
-    destination = resolver.resolve(
-        message.text
-    )
-
+    destination = resolver.resolve(message.text)
 
     if destination is None:
-
         await message.answer(
-            "❌ Не удалось найти такой город."
+            "❌ Такой город не найден.\n\n"
+            "Попробуйте еще раз.",
+            reply_markup=cancel_keyboard,
         )
-
         return
 
-
     await state.update_data(
-        destination=destination
+        destination=destination["code"],
+        destination_name=destination["city"],
     )
 
-
-    await state.set_state(
-        TrackState.waiting_date
-    )
-
+    await state.set_state(TrackState.waiting_date)
 
     await message.answer(
-        "📅 Введите дату вылета:\n\n"
-        "Формат: DD-MM-YYYY\n"
-        "Например: 30-08-2026"
+        "📅 <b>Дата вылета</b>\n\n"
+        "Введите дату в формате:\n"
+        "DD-MM-YYYY\n\n"
+        "Например: 30-08-2026",
+        reply_markup=cancel_keyboard,
     )
 
 
-
-@router.message(TrackState.waiting_date)
+@router.message(
+    TrackState.waiting_date
+)
 async def process_date(
     message: Message,
     state: FSMContext,
@@ -146,19 +162,24 @@ async def process_date(
     if departure_date is None:
 
         await message.answer(
-            "❌ Неверный формат даты."
+            "❌ Неверный формат даты.\n\n"
+            "Используйте DD-MM-YYYY.",
+            reply_markup=cancel_keyboard,
         )
 
         return
+
 
 
     if departure_date <= date.today():
 
         await message.answer(
-            "❌ Дата должна быть в будущем."
+            "❌ Дата должна быть в будущем.",
+            reply_markup=cancel_keyboard,
         )
 
         return
+
 
 
     await state.update_data(
@@ -172,14 +193,18 @@ async def process_date(
 
 
     await message.answer(
-        "💰 Введите желаемую цену:\n\n"
+        "💰 <b>Желаемая цена</b>\n\n"
+        "Введите максимальную цену в рублях.\n\n"
         "Например: 15000\n\n"
-        "Или отправьте '-' чтобы получать любые изменения цены."
+        "Или отправьте «-», чтобы получать любые изменения цены.",
+        reply_markup=cancel_keyboard,
     )
 
 
 
-@router.message(TrackState.waiting_target_price)
+@router.message(
+    TrackState.waiting_target_price
+)
 async def process_target_price(
     message: Message,
     state: FSMContext,
@@ -195,14 +220,17 @@ async def process_target_price(
     if message.text != "-":
 
         try:
+
             target_price = int(
                 message.text
             )
 
+
         except ValueError:
 
             await message.answer(
-                "❌ Цена должна быть числом."
+                "❌ Цена должна быть числом.",
+                reply_markup=cancel_keyboard,
             )
 
             return
@@ -239,12 +267,16 @@ async def process_target_price(
     if track is None:
 
         await message.answer(
-            "❌ Такое отслеживание уже существует."
+            "❌ Такое отслеживание уже существует.",
+            reply_markup=main_keyboard,
         )
 
         return
 
 
+
     await message.answer(
-        "✅ Отслеживание создано! ✈️"
+        "✅ <b>Отслеживание создано!</b>\n\n"
+        "Теперь я буду следить за ценой ✈️",
+        reply_markup=main_keyboard,
     )
