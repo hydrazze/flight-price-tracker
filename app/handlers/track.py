@@ -251,6 +251,14 @@ async def process_target_price(
         message.from_user.id
     )
 
+    if user is None:
+        user = await user_service.get_or_create(
+            telegram_id=message.from_user.id,
+            username=message.from_user.username,
+            first_name=message.from_user.first_name,
+            last_name=message.from_user.last_name,
+        )
+
 
     track = await service.create_track(
         user_id=user.id,
