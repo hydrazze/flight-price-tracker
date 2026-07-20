@@ -150,6 +150,9 @@ class TrackRepository:
 
         return track
 
+    async def delete(self, track: Track) -> None:
+        await self.session.delete(track)
+        await self.session.commit()
 
     async def exists(
         self,
