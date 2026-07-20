@@ -1,5 +1,6 @@
 from datetime import date
 import asyncio
+import json
 
 import httpx
 
@@ -7,11 +8,17 @@ from app.config.settings import settings
 from app.schemas.travelpayouts import PricesForDatesResponse
 
 from app.logging.logger import logger
+from app.cache.redis import redis_cache
 
 
 class TravelPayoutsClient:
 
     BASE_URL = "https://api.travelpayouts.com"
+
+    MAX_RETRIES = 3
+    INITIAL_DELAY = 2
+
+    CACHE_EXPIRE = 3600
 
 
     def __init__(self):
@@ -22,15 +29,31 @@ class TravelPayoutsClient:
                 "X-Access-Token": settings.travelpayouts_api_key.get_secret_value(),
                 "Accept-Encoding": "gzip",
             },
-            timeout=httpx.Timeout(
-                20.0
-            ),
+            timeout=httpx.Timeout(20.0),
         )
 
 
-    async def close(self) -> None:
+    async def close(
+        self,
+    ) -> None:
 
         await self.client.aclose()
+
+
+
+    def _cache_key(
+        self,
+        origin: str,
+        destination: str,
+        departure_date: date,
+    ) -> str:
+
+        return (
+            f"flight_price:"
+            f"{origin}:"
+            f"{destination}:"
+            f"{departure_date.isoformat()}"
+        )
 
 
 
@@ -41,12 +64,42 @@ class TravelPayoutsClient:
         departure_date: date,
     ) -> PricesForDatesResponse:
 
-        retries = 3
+
+        cache_key = self._cache_key(
+            origin,
+            destination,
+            departure_date,
+        )
+
+
+        cached = await redis_cache.get(
+            cache_key
+        )
+
+
+        if cached:
+
+            logger.info(
+                f"Redis cache hit: {cache_key}"
+            )
+
+            return PricesForDatesResponse.model_validate(
+                json.loads(cached)
+            )
+
+
+
+        logger.info(
+            f"Redis cache miss: {cache_key}"
+        )
+
+
+        delay = self.INITIAL_DELAY
 
 
         for attempt in range(
             1,
-            retries + 1,
+            self.MAX_RETRIES + 1,
         ):
 
             try:
@@ -67,15 +120,18 @@ class TravelPayoutsClient:
                 if response.status_code == 429:
 
                     logger.warning(
-                        "TravelPayouts rate limit exceeded. "
-                        f"Attempt {attempt}/{retries}"
+                        f"TravelPayouts rate limit exceeded "
+                        f"(attempt {attempt}/{self.MAX_RETRIES})"
                     )
 
-                    if attempt < retries:
+
+                    if attempt < self.MAX_RETRIES:
 
                         await asyncio.sleep(
-                            5
+                            delay
                         )
+
+                        delay *= 2
 
                         continue
 
@@ -84,28 +140,43 @@ class TravelPayoutsClient:
                 response.raise_for_status()
 
 
-                return PricesForDatesResponse.model_validate(
+                data = PricesForDatesResponse.model_validate(
                     response.json()
                 )
+
+
+                await redis_cache.set(
+                    cache_key,
+                    data.model_dump_json(),
+                    expire=self.CACHE_EXPIRE,
+                )
+
+
+                return data
+
 
 
             except (
                 httpx.TimeoutException,
                 httpx.ConnectError,
+                httpx.ReadError,
+                httpx.RemoteProtocolError,
             ) as e:
 
 
                 logger.warning(
-                    f"TravelPayouts connection error "
-                    f"attempt {attempt}/{retries}: {e}"
+                    f"TravelPayouts request failed "
+                    f"(attempt {attempt}/{self.MAX_RETRIES}): {e}"
                 )
 
 
-                if attempt < retries:
+                if attempt < self.MAX_RETRIES:
 
                     await asyncio.sleep(
-                        5
+                        delay
                     )
+
+                    delay *= 2
 
                     continue
 
@@ -115,7 +186,7 @@ class TravelPayoutsClient:
 
 
         raise RuntimeError(
-            "TravelPayouts request failed after retries"
+            "TravelPayouts request failed after retries."
         )
 
 

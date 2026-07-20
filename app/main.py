@@ -7,6 +7,7 @@ from app.commands import set_bot_commands
 
 from app.database.engine import engine
 from app.logging.logger import logger
+from app.cache.redis import redis_cache
 
 
 scheduler_task: asyncio.Task | None = None
@@ -57,6 +58,9 @@ async def shutdown() -> None:
 
 
     await stop_scheduler()
+
+
+    await redis_cache.close()
 
 
     await bot.session.close()

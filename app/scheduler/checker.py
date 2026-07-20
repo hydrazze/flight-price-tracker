@@ -16,7 +16,7 @@ from app.logging.logger import logger
 
 async def run_price_checker(
     bot: Bot,
-):
+) -> None:
 
     async with async_session_maker() as session:
 
@@ -24,19 +24,15 @@ async def run_price_checker(
             session
         )
 
-
         history_repository = PriceHistoryRepository(
             session
         )
 
-
         client = TravelPayoutsClient()
-
 
         notification_service = NotificationService(
             bot
         )
-
 
         service = PriceCheckerService(
             repository=repository,
@@ -48,7 +44,15 @@ async def run_price_checker(
 
         try:
 
+            logger.info(
+                "Price checker started"
+            )
+
             await service.check_prices()
+
+            logger.info(
+                "Price checker completed"
+            )
 
 
         finally:
@@ -59,10 +63,10 @@ async def run_price_checker(
 
 async def scheduler_loop(
     bot: Bot,
-):
+) -> None:
 
     logger.info(
-        "Scheduler started"
+        f"Scheduler started. Interval: {settings.price_check_interval} seconds"
     )
 
 

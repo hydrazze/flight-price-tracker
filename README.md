@@ -24,7 +24,6 @@ A Telegram bot for automatically tracking flight ticket prices.
 - [Running with Docker](#-running-with-docker)
 - [Database Migrations](#-database-migrations)
 - [Testing](#-testing)
-- [Roadmap](#-roadmap)
 - [License](#-license)
 
 ---
@@ -50,11 +49,7 @@ A Telegram bot for automatically tracking flight ticket prices.
 |
  Purpose 
 |
-|
 ---
-|
----
-|
 |
  Python 3.13 
 |
@@ -100,19 +95,19 @@ A Telegram bot for automatically tracking flight ticket prices.
 
 ## 🏗 Architecture
 
-Telegram
-│
-▼
-Aiogram Handlers ──▶ Middlewares
-│
-▼
-Services
-│
-▼
-Repositories
-│
-▼
-PostgreSQL
+Telegram  
+    │  
+    ▼  
+Aiogram Handlers ──▶ Middlewares  
+    │  
+    ▼  
+Services  
+    │  
+    ▼  
+Repositories  
+    │  
+    ▼  
+PostgreSQL  
 
 Scheduler ──▶ Services (periodic price checks)
 Providers ──▶ external flight price API (Travelpayouts)
@@ -122,22 +117,22 @@ Providers ──▶ external flight price API (Travelpayouts)
 
 ## 📁 Project Structure
 
-app/
-├── config/ # application settings (Pydantic Settings)
-├── database/ # DB connection, sessions
-├── handlers/ # Aiogram handlers
-├── keyboards/ # inline/reply keyboards
-├── logging/ # logging configuration
-├── middlewares/ # Aiogram middlewares
-├── models/ # SQLAlchemy models
-├── providers/ # external API integrations (Travelpayouts)
-├── repositories/ # data access layer
-├── scheduler/ # background jobs (scheduled price checks)
-├── schemas/ # Pydantic schemas
-├── services/ # business logic
-├── states/ # FSM states
-├── tests/ # tests
-└── utils/ # helper utilities
+app/  
+├── config/ # application settings (Pydantic Settings)  
+├── database/ # DB connection, sessions  
+├── handlers/ # Aiogram handlers  
+├── keyboards/ # inline/reply keyboards  
+├── logging/ # logging configuration  
+├── middlewares/ # Aiogram middlewares  
+├── models/ # SQLAlchemy models  
+├── providers/ # external API integrations (Travelpayouts)  
+├── repositories/ # data access layer  
+├── scheduler/ # background jobs (scheduled price checks)  
+├── schemas/ # Pydantic schemas  
+├── services/ # business logic  
+├── states/ # FSM states  
+├── tests/ # tests  
+└── utils/ # helper utilities  
 
 
 ---
@@ -178,6 +173,10 @@ Create a `.env` file based on `.env.example`:
 
 | Command | Description |
 |---|---|
+| **General** | |
+| `/start` | Start the bot |
+| `/help` | Show all available commands |
+| **Tracking** | |
 | `/track` | Start tracking a flight |
 | `/tracks` | View your tracked flights |
 | `/archive` | View trip history |

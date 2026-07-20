@@ -10,6 +10,8 @@ class Settings(BaseSettings):
 
     database_url: str
 
+    redis_url: str = "redis://localhost:6379/0"
+
     price_check_interval: int = 3600
 
 

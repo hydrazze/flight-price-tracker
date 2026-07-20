@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Telegram service for tracking flight ticket prices."
 readme = "README.md"
 requires-python = ">=3.13"
+
 dependencies = [
     "aiogram>=3.29.1",
     "alembic>=1.18.5",
@@ -11,6 +12,7 @@ dependencies = [
     "httpx>=0.28.1",
     "pydantic-settings>=2.14.2",
     "python-dotenv>=1.2.2",
+    "redis>=6.2.0",
     "sqlalchemy>=2.0.51",
     "transliterate>=1.10.2",
 ]

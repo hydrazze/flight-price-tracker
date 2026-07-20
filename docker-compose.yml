@@ -1,15 +1,25 @@
-version: "3.9"
-
 services:
+
   bot:
     build: .
     container_name: flight-price-tracker-bot
     restart: unless-stopped
+
     env_file:
       - .env
+
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    command: >
+      sh -c "
+      uv run alembic upgrade head &&
+      uv run python -m app.main
+      "
+
 
   postgres:
     image: postgres:17
@@ -17,9 +27,9 @@ services:
     restart: unless-stopped
 
     environment:
-      POSTGRES_DB: flight_tracker
+      POSTGRES_DB: flight_price_tracker
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: "Gfd33SikSkq"
 
     ports:
       - "5432:5432"
@@ -28,10 +38,43 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d flight_tracker"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U postgres -d flight_price_tracker"
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
 
+
+
+  redis:
+    image: redis:7-alpine
+    container_name: flight-price-tracker-redis
+    restart: unless-stopped
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - redis_data:/data
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "redis-cli",
+          "ping"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+
 volumes:
+
   postgres_data:
+
+  redis_data:
