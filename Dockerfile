@@ -5,13 +5,11 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY pyproject.toml ./
-
 RUN pip install --no-cache-dir uv
+
+COPY pyproject.toml uv.lock ./
+
+RUN uv sync --frozen --no-install-project
 
 COPY . .
 
