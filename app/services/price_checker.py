@@ -40,15 +40,13 @@ class PriceCheckerService:
             return old_price != new_price
 
 
+        # Первый найденный рейс
         if old_price is None:
             return new_price <= target_price
 
 
-        if old_price <= target_price:
-            return True
-
-
-        if new_price <= target_price:
+        # Цена впервые достигла цели
+        if old_price > target_price >= new_price:
             return True
 
 

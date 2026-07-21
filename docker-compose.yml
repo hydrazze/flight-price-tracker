@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
 
     env_file:
-      - .env
+      - .env.docker
 
     depends_on:
       postgres:
@@ -29,7 +29,7 @@ services:
     environment:
       POSTGRES_DB: flight_price_tracker
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: "Gfd33SikSkq"
+      POSTGRES_PASSWORD: "Gfd33Sik$$kq"
 
     ports:
       - "5432:5432"

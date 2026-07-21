@@ -7,6 +7,8 @@ class RedisCache:
 
     def __init__(self):
 
+        print(f"REDIS_URL = {settings.redis_url!r}")
+
         self.redis = Redis.from_url(
             settings.redis_url,
             decode_responses=True,

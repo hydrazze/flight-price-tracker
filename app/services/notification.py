@@ -1,7 +1,9 @@
 from datetime import date
 
 from aiogram import Bot
+from aiogram.exceptions import TelegramForbiddenError
 
+from app.logging.logger import logger
 from app.services.city_resolver import resolver
 
 
@@ -10,7 +12,27 @@ class NotificationService:
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    def _format_route(self, origin: str, destination: str, departure_date: date) -> str:
+    async def _send_message(
+        self,
+        telegram_id: int,
+        text: str,
+    ) -> None:
+        try:
+            await self.bot.send_message(
+                chat_id=telegram_id,
+                text=text,
+            )
+        except TelegramForbiddenError:
+            logger.warning(
+                f"User {telegram_id} blocked the bot"
+            )
+
+    def _format_route(
+        self,
+        origin: str,
+        destination: str,
+        departure_date: date,
+    ) -> str:
         origin_name = resolver.get_city_name(origin)
         destination_name = resolver.get_city_name(destination)
 
@@ -84,8 +106,8 @@ class NotificationService:
                 f"🎯 Ваша цель: {target_price} ₽"
             )
 
-        await self.bot.send_message(
-            chat_id=telegram_id,
+        await self._send_message(
+            telegram_id=telegram_id,
             text=text,
         )
 
@@ -99,8 +121,8 @@ class NotificationService:
 
         route = self._format_route(origin, destination, departure_date)
 
-        await self.bot.send_message(
-            chat_id=telegram_id,
+        await self._send_message(
+            telegram_id=telegram_id,
             text=(
                 "😔 Не удалось найти рейсы.\n\n"
                 f"{route}"
@@ -117,8 +139,8 @@ class NotificationService:
 
         route = self._format_route(origin, destination, departure_date)
 
-        await self.bot.send_message(
-            chat_id=telegram_id,
+        await self._send_message(
+            telegram_id=telegram_id,
             text=(
                 "🛫 Отслеживание завершено\n\n"
                 f"{route}\n\n"

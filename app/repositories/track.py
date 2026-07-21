@@ -74,8 +74,10 @@ class TrackRepository:
                 User.telegram_id == telegram_id,
                 Track.active.is_(True),
             )
+            .order_by(
+                Track.departure_date.asc()
+            )
         )
-
         return list(
             result.scalars().all()
         )

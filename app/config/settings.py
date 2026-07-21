@@ -22,3 +22,6 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+print("DATABASE_URL =", settings.database_url)
+print("REDIS_URL =", settings.redis_url)

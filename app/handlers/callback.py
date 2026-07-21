@@ -7,7 +7,11 @@ from app.states.track import TrackState
 from app.utils.track_formatter import format_tracks_list, format_archive_track
 
 from app.keyboards.main import main_keyboard
-from app.keyboards.tracks import archive_keyboard
+from app.keyboards.tracks import (
+    archive_keyboard,
+    tracks_keyboard,
+)
+from app.handlers.help import HELP_TEXT, help_keyboard
 
 from app.database.engine import async_session_maker
 
@@ -96,7 +100,7 @@ async def my_tracks_callback(
 
         await callback.message.answer(
             format_tracks_list(tracks),
-            reply_markup=main_keyboard,
+            reply_markup=tracks_keyboard(tracks),
         )
 
 
@@ -195,11 +199,28 @@ async def check_prices_callback(
 
 
 
-    await callback.message.answer(
-        "✅ Проверка завершена.",
-        reply_markup=main_keyboard,
-    )
+    async with async_session_maker() as session:
 
+        repository = TrackRepository(session)
+
+        tracks = await repository.get_user_tracks(
+            telegram_id=callback.from_user.id
+        )
+
+
+    if tracks:
+
+        await callback.message.answer(
+            format_tracks_list(tracks),
+            reply_markup=tracks_keyboard(tracks),
+        )
+
+    else:
+
+        await callback.message.answer(
+            "📋 Активных отслеживаний нет.",
+            reply_markup=main_keyboard,
+        )
 
     await callback.answer()
 
@@ -213,20 +234,8 @@ async def help_callback(
 ):
 
     await callback.message.answer(
-"""
-📋 Доступные команды
-
-✈️ /track — создать отслеживание
-
-📡 /tracks — активные направления
-
-📦 /archive — архив поездок
-
-🔍 /check — проверить цены сейчас
-
-<i>По вопросам и предложениям: @hydraze</i>
-"""
+        HELP_TEXT,
+        reply_markup=help_keyboard(),
     )
-
 
     await callback.answer()
