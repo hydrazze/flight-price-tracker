@@ -1,5 +1,6 @@
 from aiogram import Router, F
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message
+from aiogram.filters import Command
 
 from aiogram.fsm.context import FSMContext
 
@@ -28,7 +29,39 @@ from app.bot import bot
 
 router = Router()
 
+@router.message(Command("archive"))
+async def archive_command(
+    message: Message,
+):
 
+    async with async_session_maker() as session:
+
+        repository = TrackRepository(
+            session
+        )
+
+        tracks = await repository.get_user_archive(
+            telegram_id=message.from_user.id
+        )
+
+        if not tracks:
+
+            await message.answer(
+                "🗄 Архив пуст.",
+                reply_markup=main_keyboard,
+            )
+
+            return
+
+        text = "🗄 <b>Архив поездок</b>\n\n" + "\n\n".join(
+            format_archive_track(track)
+            for track in tracks
+        )
+
+        await message.answer(
+            text,
+            reply_markup=archive_keyboard(),
+        )
 
 @router.callback_query(
     F.data == "cancel_track"
