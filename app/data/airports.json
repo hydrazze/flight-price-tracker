@@ -244,5 +244,101 @@
     "CPT": [
         "кейптаун",
         "cape town"
+    ],
+    "MQF": [
+    "магнитогорск",
+    "magnitogorsk"
+    ],
+    "BEG": [
+        "белград",
+        "beograd",
+        "belgrade"
+    ],
+    "INI": [
+        "ниш",
+        "nis",
+        "niš"
+    ],
+    "PRN": [
+        "приштина",
+        "pristina",
+        "prishtina"
+    ],
+    "KUF": [
+        "самара",
+        "samara"
+    ],
+    "GOJ": [
+        "нижний новгород",
+        "нижний",
+        "nizhny novgorod"
+    ],
+    "PEE": [
+        "пермь",
+        "perm"
+    ],
+    "CEK": [
+        "челябинск",
+        "chelyabinsk"
+    ],
+    "KGF": [
+        "караганда",
+        "karaganda"
+    ],
+    "NQZ": [
+        "астана",
+        "нур-султан",
+        "astana",
+        "nur-sultan"
+    ],
+    "GYD": [
+        "баку",
+        "baku"
+    ],
+    "ESB": [
+        "анкара",
+        "ankara"
+    ],
+    "ADB": [
+        "измир",
+        "izmir"
+    ],
+    "BUD": [
+        "будапешт",
+        "budapest"
+    ],
+    "BER": [
+        "берлин",
+        "berlin"
+    ],
+    "ZRH": [
+        "цюрих",
+        "zurich"
+    ],
+    "CPH": [
+        "копенгаген",
+        "copenhagen"
+    ],
+    "OSL": [
+        "осло",
+        "oslo"
+    ],
+    "HEL": [
+        "хельсинки",
+        "helsinki"
+    ],
+    "DUB": [
+        "дублин",
+        "dublin"
+    ],
+    "JFK": [
+        "нью-йорк кеннеди",
+        "kennedy"
+    ],
+    "KIX": [
+        "осака",
+        "osaka",
+        "кансай",
+        "kansai"
     ]
-}
+    }
