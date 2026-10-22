@@ -1,7 +1,10 @@
 from datetime import datetime, date
 
 
-def parse_date(value: str) -> date | None:
+def parse_date(value: str | None) -> date | None:
+    if not value:
+        return None
+    value = value.strip()
     formats = [
         "%d-%m-%Y",
         "%Y-%m-%d",

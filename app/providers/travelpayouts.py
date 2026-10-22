@@ -1,8 +1,8 @@
 from datetime import date
 import asyncio
-import json
 
 import httpx
+from pydantic import ValidationError
 
 from app.config.settings import settings
 from app.schemas.travelpayouts import PricesForDatesResponse
@@ -78,16 +78,14 @@ class TravelPayoutsClient:
 
 
         if cached:
-
-            logger.info(
-                f"Redis cache hit: {cache_key}"
-            )
-
-            return PricesForDatesResponse.model_validate(
-                json.loads(cached)
-            )
-
-
+            try:
+                data = PricesForDatesResponse.model_validate_json(cached)
+            except ValidationError:
+                logger.warning("Invalid cached price response; fetching from provider")
+                await redis_cache.delete(cache_key)
+            else:
+                logger.info(f"Redis cache hit: {cache_key}")
+                return data
 
         logger.info(
             f"Redis cache miss: {cache_key}"
@@ -211,4 +209,4 @@ class TravelPayoutsClient:
             return None
 
 
-        return response.data[0].price
+        return min(flight.price for flight in response.data)

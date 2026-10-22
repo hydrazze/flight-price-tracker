@@ -1,74 +1,47 @@
 services:
-
   bot:
     build: .
-    container_name: flight-price-tracker-bot
     restart: unless-stopped
-
-    env_file:
-      - .env.docker
-
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-flight_tracker}
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-
     command: >
-      sh -c "
-      uv run alembic upgrade head &&
-      uv run python -m app.main
-      "
-
+      sh -c "uv run --frozen alembic upgrade head &&
+             uv run --frozen python -m app.main"
 
   postgres:
     image: postgres:17
-    container_name: flight-price-tracker-db
     restart: unless-stopped
-
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-
+      POSTGRES_DB: ${POSTGRES_DB:-flight_tracker}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U postgres -d flight_price_tracker"
-        ]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
       timeout: 5s
-      retries: 5
-
-
+      retries: 10
 
   redis:
     image: redis:7-alpine
-    container_name: flight-price-tracker-redis
     restart: unless-stopped
-
-    volumes:
-      - redis_data:/data
-
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     healthcheck:
-      test:
-        [
-          "CMD",
-          "redis-cli",
-          "ping"
-        ]
-      interval: 10s
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
       timeout: 5s
-      retries: 5
-
-
+      retries: 10
 
 volumes:
-
   postgres_data:
-
-  redis_data:

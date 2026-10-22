@@ -69,6 +69,7 @@ class TrackRepository:
 
         result = await self.session.execute(
             select(Track)
+            .options(selectinload(Track.user))
             .join(User)
             .where(
                 User.telegram_id == telegram_id,
@@ -112,6 +113,7 @@ class TrackRepository:
 
         result = await self.session.execute(
             select(Track)
+            .options(selectinload(Track.user))
             .where(
                 Track.id == track_id
             )
@@ -128,6 +130,7 @@ class TrackRepository:
 
         result = await self.session.execute(
             select(Track)
+            .options(selectinload(Track.user))
             .join(User)
             .where(
                 Track.id == track_id,
@@ -181,18 +184,17 @@ class TrackRepository:
     async def archive_expired_tracks(
         self,
         today: date,
+        telegram_id: int | None = None,
     ) -> list[Track]:
 
-        result = await self.session.execute(
+        query = (
             select(Track)
-            .options(
-                selectinload(Track.user)
-            )
-            .where(
-                Track.active.is_(True),
-                Track.departure_date < today,
-            )
+            .options(selectinload(Track.user))
+            .where(Track.active.is_(True), Track.departure_date < today)
         )
+        if telegram_id is not None:
+            query = query.join(User).where(User.telegram_id == telegram_id)
+        result = await self.session.execute(query)
 
         tracks = list(
             result.scalars().all()

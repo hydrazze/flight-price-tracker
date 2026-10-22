@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 
 
 class Settings(BaseSettings):
@@ -12,16 +12,16 @@ class Settings(BaseSettings):
 
     redis_url: str = "redis://localhost:6379/0"
 
-    price_check_interval: int = 3600
+    price_check_interval: int = Field(default=3600, gt=0)
+
+    sql_echo: bool = False
 
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
+        extra="ignore",
     )
 
 
 settings = Settings()
-
-print("DATABASE_URL =", settings.database_url)
-print("REDIS_URL =", settings.redis_url)

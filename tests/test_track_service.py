@@ -156,7 +156,7 @@ async def test_update_target_price_success(service):
 
     updated = object()
 
-    service.repository.get_by_id = AsyncMock(
+    service.repository.get_user_track = AsyncMock(
         return_value=track
     )
 
@@ -167,6 +167,7 @@ async def test_update_target_price_success(service):
     result = await service.update_target_price(
         track_id=1,
         target_price=15000,
+        telegram_id=123,
     )
 
     assert result is updated
@@ -180,7 +181,7 @@ async def test_update_target_price_success(service):
 @pytest.mark.asyncio
 async def test_update_target_price_not_found(service):
 
-    service.repository.get_by_id = AsyncMock(
+    service.repository.get_user_track = AsyncMock(
         return_value=None
     )
 
@@ -189,6 +190,7 @@ async def test_update_target_price_not_found(service):
     result = await service.update_target_price(
         track_id=1,
         target_price=15000,
+        telegram_id=123,
     )
 
     assert result is None

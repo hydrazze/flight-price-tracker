@@ -1,48 +1,20 @@
+"""Run one price check for all active tracks without starting polling."""
 import asyncio
 
-from aiogram import Bot
-
-from app.config.settings import settings
-from app.database.engine import async_session_maker
-from app.repositories.track import TrackRepository
-from app.providers.travelpayouts import TravelPayoutsClient
-from app.services.notification import NotificationService
-from app.services.price_checker import PriceCheckerService
-from app.repositories.price_history import PriceHistoryRepository
+from app.bot import bot
+from app.cache.redis import redis_cache
+from app.database.engine import engine
+from app.scheduler.checker import run_price_checker
 
 
-async def main():
-
-    bot = Bot(
-        token=settings.bot_token.get_secret_value()
-    )
-
-    async with async_session_maker() as session:
-
-        repository = TrackRepository(
-            session
-        )
-
-        history_repository = PriceHistoryRepository(session)
-
-        client = TravelPayoutsClient()
-
-        notification_service = NotificationService(
-            bot
-        )
-
-        service = PriceCheckerService(
-            repository,
-            client,
-            notification_service,
-            history_repository           
-        )
-
-        await service.check_prices()
-
-        await client.close()
-
-    await bot.session.close()
+async def main() -> None:
+    try:
+        await run_price_checker(bot)
+    finally:
+        await redis_cache.close()
+        await bot.session.close()
+        await engine.dispose()
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

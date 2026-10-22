@@ -80,10 +80,11 @@ class TrackService:
         self,
         track_id: int,
         target_price: int | None,
+        telegram_id: int,
     ):
 
-        track = await self.repository.get_by_id(
-            track_id
+        track = await self.repository.get_user_track(
+            track_id, telegram_id
         )
 
 
