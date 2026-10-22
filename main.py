@@ -1,6 +1,8 @@
-def main():
-    print("Flight Price Tracker")
+"""Convenience entry point; the canonical command is python -m app.main."""
+import asyncio
+
+from app.main import main
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

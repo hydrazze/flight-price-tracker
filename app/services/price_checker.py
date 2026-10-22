@@ -56,6 +56,7 @@ class PriceCheckerService:
 
     async def check_prices(
         self,
+        telegram_id: int | None = None,
     ) -> None:
 
         logger.info(
@@ -64,7 +65,8 @@ class PriceCheckerService:
 
 
         expired_tracks = await self.repository.archive_expired_tracks(
-            today=date.today()
+            today=date.today(),
+            telegram_id=telegram_id,
         )
 
 
@@ -78,7 +80,11 @@ class PriceCheckerService:
             )
 
 
-        tracks = await self.repository.get_active_tracks()
+        tracks = (
+            await self.repository.get_active_tracks()
+            if telegram_id is None
+            else await self.repository.get_user_tracks(telegram_id)
+        )
 
 
         logger.info(
@@ -186,6 +192,8 @@ class PriceCheckerService:
 
             old_price = track.last_price
 
+
+            track.no_flights_notified = False
 
             track.status = TrackStatus.AVAILABLE
 

@@ -1,5 +1,7 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
+from aiogram.filters import Command
+from app.keyboards.help import help_keyboard
 
 
 router = Router()
@@ -20,29 +22,14 @@ HELP_TEXT = """
 """
 
 
-def help_keyboard():
-    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="🏠 Главное меню",
-                    callback_data="main_menu",
-                )
-            ]
-        ]
-    )
-
-
-@router.message(F.text == "/help")
+@router.message(Command("help"))
 async def help_handler(
     message: Message,
 ):
 
     await message.answer(
         HELP_TEXT,
-        reply_markup=help_keyboard(),
+        reply_markup=help_keyboard,
     )
 
 
@@ -55,7 +42,7 @@ async def help_callback(
 
     await callback.message.edit_text(
         HELP_TEXT,
-        reply_markup=help_keyboard(),
+        reply_markup=help_keyboard,
     )
 
     await callback.answer()

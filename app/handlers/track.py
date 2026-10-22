@@ -226,7 +226,7 @@ async def process_target_price(
             )
 
 
-        except ValueError:
+        except (TypeError, ValueError):
 
             await message.answer(
                 "❌ Цена должна быть числом.",
@@ -236,6 +236,10 @@ async def process_target_price(
             return
 
 
+
+    if target_price is not None and not 0 < target_price <= 2_147_483_647:
+        await message.answer("❌ Введите положительную цену до 2147483647 ₽ или '-'.", reply_markup=cancel_keyboard)
+        return
 
     service = TrackService(
         session

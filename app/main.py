@@ -90,20 +90,10 @@ async def main() -> None:
     )
 
 
-    await set_bot_commands(
-        bot
-    )
-
-
-    await start_scheduler()
-
-
-    logger.info(
-        "Bot started"
-    )
-
-
     try:
+        await set_bot_commands(bot)
+        await start_scheduler()
+        logger.info("Bot started")
 
         await dispatcher.start_polling(
             bot,

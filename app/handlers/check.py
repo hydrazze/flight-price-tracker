@@ -11,8 +11,6 @@ from app.services.notification import NotificationService
 
 from aiogram import Bot
 
-from app.config.settings import settings
-
 
 router = Router()
 
@@ -54,10 +52,10 @@ async def check_handler(
         )
 
 
-        await service.check_prices()
-
-
-        await client.close()
+        try:
+            await service.check_prices(telegram_id=message.from_user.id)
+        finally:
+            await client.close()
 
 
     await message.answer(

@@ -15,6 +15,6 @@ bot = Bot(
 
 dispatcher = Dispatcher()
 
-dispatcher.update.middleware(
+dispatcher.update.outer_middleware(
     DatabaseMiddleware()
 )

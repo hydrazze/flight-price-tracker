@@ -17,6 +17,8 @@ venv/
 .ruff_cache/
 
 .env
+.env.*
+logs/
 
 postgres_data/
 

@@ -1,262 +1,201 @@
 # ✈️ Flight Price Tracker
 
-![Python](https://img.shields.io/badge/Python-3.13-blue)
-![Aiogram](https://img.shields.io/badge/Aiogram-3-2CA5E0)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791)
-![Docker](https://img.shields.io/badge/Docker-ready-2496ED)
-![License](https://img.shields.io/badge/license-MIT-green)
+Telegram-бот для отслеживания цен на авиабилеты через API Travelpayouts.
+Написан на Python 3.13, aiogram 3 и SQLAlchemy 2. Данные хранятся в PostgreSQL,
+ответы API кешируются в Redis.
 
-A Telegram bot for automatically tracking flight ticket prices.
+## Возможности
 
----
+- Создание отслеживания по городам или IATA-кодам и дате вылета.
+- Уведомление о первой найденной цене и последующих изменениях, если цель не задана.
+- Уведомление при первом достижении целевой цены и при повторном пересечении порога сверху вниз.
+- Просмотр активных направлений, изменение цели, удаление и история изменений цены.
+- Ручная проверка своих направлений и автоматическая проверка по расписанию.
+- Архивирование направлений после даты вылета.
 
-## 📋 Contents
+Цены запрашиваются в рублях для рынка `ru`, для перелёта в одну сторону.
+Источник — API Travelpayouts: найденная цена не гарантирует наличие билета при бронировании.
 
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Architecture](#-architecture)
-- [Project Structure](#-project-structure)
-- [ER Diagram](#-er-diagram)
-- [Requirements](#-requirements)
-- [Environment Variables](#-environment-variables)
-- [Bot Commands](#-bot-commands)
-- [Local Setup](#-local-setup)
-- [Running with Docker](#-running-with-docker)
-- [Database Migrations](#-database-migrations)
-- [Testing](#-testing)
-- [License](#-license)
+## Стек и требования
 
----
-
-## ✨ Features
-
-- ✈️ Create flight price tracking
-- 💰 Track price changes
-- 🎯 Notifications when a target price is reached
-- 📉 Notifications on any price change
-- 📊 Price change history
-- 📦 Automatic archiving of completed trackings
-- 🔄 Manual price check
-- ⏰ Automatic scheduled price checks
-
----
-
-## 🛠 Tech Stack
-
-
-|
- Technology 
-|
- Purpose 
-|
----
-|
- Python 3.13 
-|
- Implementation language 
-|
-|
- Aiogram 3 
-|
- Telegram Bot API framework 
-|
-|
- SQLAlchemy 2 
-|
- ORM 
-|
-|
- PostgreSQL 
-|
- Database 
-|
-|
- Alembic 
-|
- Database migrations 
-|
-|
- HTTPX 
-|
- Async HTTP requests to the price provider 
-|
-|
- Pydantic Settings 
-|
- Configuration management 
-|
-|
- Docker / Docker Compose 
-|
- Containerization and local environment 
-|
-
----
-
-## 🏗 Architecture
-
-Telegram  
-    │  
-    ▼  
-Aiogram Handlers ──▶ Middlewares  
-    │  
-    ▼  
-Services  
-    │  
-    ▼  
-Repositories  
-    │  
-    ▼  
-PostgreSQL  
-
-Scheduler ──▶ Services (periodic price checks)
-Providers ──▶ external flight price API (Travelpayouts)
-
-
----
-
-## 📁 Project Structure
-
-app/  
-├── config/ # application settings (Pydantic Settings)  
-├── database/ # DB connection, sessions  
-├── handlers/ # Aiogram handlers  
-├── keyboards/ # inline/reply keyboards  
-├── logging/ # logging configuration  
-├── middlewares/ # Aiogram middlewares  
-├── models/ # SQLAlchemy models  
-├── providers/ # external API integrations (Travelpayouts)  
-├── repositories/ # data access layer  
-├── scheduler/ # background jobs (scheduled price checks)  
-├── schemas/ # Pydantic schemas  
-├── services/ # business logic  
-├── states/ # FSM states  
-├── tests/ # tests  
-└── utils/ # helper utilities  
-
-
----
-
-## 🗄 ER Diagram
-
-<a href="assets/db_schema.svg">
-  <img src="assets/db_schema.svg" width="750">
-</a>
-
----
-
-## ✅ Requirements
-
-- Python 3.13+
-- PostgreSQL 14+
-- [uv](https://docs.astral.sh/uv/) — package and virtual environment manager
-- Docker and Docker Compose (for containerized setup)
-- A Telegram bot token (get one from [@BotFather](https://t.me/BotFather))
-- A [Travelpayouts](https://www.travelpayouts.com/) API key for fetching flight prices
-
----
-
-## ⚙️ Environment Variables
-
-Create a `.env` file based on `.env.example`:
-
-| Variable | Description | Example |
-|---|---|---|
-| `BOT_TOKEN` | Telegram bot token from BotFather | `123456789:AAExampleTokenHere` |
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql+asyncpg://user:password@localhost:5432/flight_tracker` |
-| `TRAVELPAYOUTS_API_KEY` | Travelpayouts API key | `your_api_key` |
-| `PRICE_CHECK_INTERVAL` | Automatic price check interval, in seconds | `3600` |
-
----
-
-## 🤖 Bot Commands
-
-| Command | Description |
+| Компонент | Назначение |
 |---|---|
-| **General** | |
-| `/start` | Start the bot |
-| `/help` | Show all available commands |
-| **Tracking** | |
-| `/track` | Start tracking a flight |
-| `/tracks` | View your tracked flights |
-| `/archive` | View trip history |
----
+| Python 3.13+, [uv](https://docs.astral.sh/uv/) | Запуск и установка зависимостей из `uv.lock` |
+| aiogram 3 | Telegram Bot API, long polling и диалоги создания отслеживаний |
+| PostgreSQL 14+ (17 в Compose) | Пользователи, отслеживания, история цен |
+| SQLAlchemy 2, asyncpg, Alembic | Асинхронный доступ к БД и миграции |
+| Redis 7 | Кеш ответов Travelpayouts с TTL 3600 секунд |
+| HTTPX, Pydantic Settings | Запросы к API и конфигурация |
+| pytest, pytest-asyncio | Тесты |
 
-## 🚀 Local Setup
+Для работы бота нужны токен от [BotFather](https://t.me/BotFather),
+ключ [Travelpayouts](https://www.travelpayouts.com/) и HTTPS-доступ к
+`api.telegram.org` и `api.travelpayouts.com`.
+Docker и Compose нужны только для контейнерного запуска сервисов или всего приложения.
 
-1. Clone the repository:
+Redis ускоряет повторные проверки одного маршрута и даты. Если Redis недоступен,
+бот обращается к API напрямую. Ручная проверка тоже использует кеш и может вернуть
+ответ, полученный в течение последнего часа. Redis используется для кеша цен;
+состояния диалогов aiogram хранятся в памяти и сбрасываются при перезапуске.
+
+## Настройки
+
 ```bash
-
 git clone https://github.com/hydrazze/flight-price-tracker.git
 cd flight-price-tracker
+cp .env.example .env
 ```
 
-2. Install dependencies:
+Заполните `.env`. Он исключён из Git и Docker build context; секреты не нужно коммитить.
+Переменные окружения имеют приоритет над `.env`.
+
+| Переменная | Значение и назначение |
+|---|---|
+| `BOT_TOKEN` | Обязательный токен Telegram-бота |
+| `TRAVELPAYOUTS_API_KEY` | Обязательный ключ API Travelpayouts |
+| `DATABASE_URL` | Обязательная строка подключения с драйвером `postgresql+asyncpg` |
+| `REDIS_URL` | По умолчанию `redis://localhost:6379/0` |
+| `PRICE_CHECK_INTERVAL` | Положительный интервал между циклами проверки в секундах, по умолчанию `3600` |
+| `SQL_ECHO` | Вывод SQL-запросов, по умолчанию `false`; включайте только для отладки |
+| `POSTGRES_DB` | Имя БД для Compose, по умолчанию `flight_tracker` |
+| `POSTGRES_USER` | Пользователь БД для Compose, по умолчанию `postgres` |
+| `POSTGRES_PASSWORD` | Обязательный пароль БД для Compose |
+| `POSTGRES_PORT` / `REDIS_PORT` | Необязательные локальные порты Compose, по умолчанию `5432` / `6379` |
+
+В `.env.example` адреса `localhost` рассчитаны на запуск Python на компьютере
+разработчика. Укажите свой пароль в `POSTGRES_PASSWORD` и в `DATABASE_URL`.
+Спецсимволы пароля в URL требуют percent-encoding; для автоматически собираемого
+Compose URL используйте пароль из URL-безопасных символов, например длинную hex-строку.
+
+## Локальная разработка
+
+1. Установите Python 3.13 и uv, затем зависимости, включая тестовые:
+
+   ```bash
+   uv sync --frozen
+   ```
+
+2. Запустите PostgreSQL и Redis. Можно использовать сервисы из Compose:
+
+   ```bash
+   docker compose up -d --wait postgres redis
+   ```
+
+   Они доступны только на loopback-интерфейсе. При смене локальных портов обновите
+   `DATABASE_URL` и `REDIS_URL` в `.env`. Если у вас уже есть эти сервисы,
+   достаточно указать их адреса.
+
+3. Примените миграции и запустите бота:
+
+   ```bash
+   uv run --frozen alembic upgrade head
+   uv run --frozen python -m app.main
+   ```
+
+При запуске устанавливается меню команд и начинается первый цикл проверки цен,
+затем бот получает обновления через long polling. Не запускайте одновременно
+несколько экземпляров polling с одним токеном.
+
+## Полный запуск в Docker
+
+Используется тот же `.env`, отдельный `.env.docker` не нужен.
+Compose подставляет для бота адреса `postgres` и `redis` вместо `localhost`
+и собирает `DATABASE_URL` из `POSTGRES_*`.
+
 ```bash
-uv sync
+docker compose up -d --build
+docker compose logs -f bot
 ```
 
-3. Fill in `.env` based on `.env.example`.
+Бот ждёт готовности PostgreSQL и Redis и автоматически применяет миграции перед
+запуском. PostgreSQL сохраняет данные в именованном томе; Redis служит временным кешем.
+Изменение `POSTGRES_*` не меняет пользователей и пароли в уже созданной БД.
 
-4. Apply database migrations:
 ```bash
-uv run alembic upgrade head
-```
-
-5. Run the bot:
-```bash
-uv run python -m app.main
-```
-
----
-
-## 🐳 Running with Docker
-
-Build the containers:
-```bash
-docker compose build
-```
-
-Start:
-```bash
-docker compose up
-```
-or in detached mode:
-```bash
+docker compose stop
+# Запустить существующие контейнеры снова:
 docker compose up -d
-```
-
-Stop:
-```bash
+# Удалить контейнеры, сохранив данные PostgreSQL:
 docker compose down
 ```
 
-> On first launch, make sure migrations have been applied (see [Database Migrations](#-database-migrations)).
+`docker compose down -v` удаляет также том с данными БД — используйте только
+если намерены очистить локальную базу.
 
----
+## Команды бота
 
-## 🔄 Database Migrations
+| Команда | Действие |
+|---|---|
+| `/start` | Главное меню |
+| `/track` | Создать отслеживание; дата `DD-MM-YYYY` или `YYYY-MM-DD`, цена в рублях или `-` без цели |
+| `/tracks` | Свои активные отслеживания и действия с ними |
+| `/archive` | Завершённые отслеживания |
+| `/check` | Проверить свои активные направления |
+| `/help` | Справка |
 
-Create a new migration after changing models:
+В карточке направления доступны проверка цены, последние 10 записей истории,
+изменение цели и удаление. В историю записываются изменения цены, а не каждый запрос.
+
+Для отдельного административного прохода по **всем** пользователям без polling:
+
 ```bash
-uv run alembic revision --autogenerate -m "description of changes"
+uv run --frozen python check_prices.py
 ```
 
-Apply migrations:
-```bash
-uv run alembic upgrade head
-```
+Не запускайте его параллельно с планировщиком: проверки не имеют распределённой блокировки.
 
----
-
-## 🧪 Testing
+## Миграции
 
 ```bash
-uv run pytest
+uv run --frozen alembic upgrade head
+uv run --frozen alembic current
+# После изменения моделей:
+uv run --frozen alembic revision --autogenerate -m "describe the change"
 ```
 
----
+Проверяйте сгенерированные миграции перед применением. Для приложения в Compose:
+`docker compose exec bot uv run --frozen alembic current`.
 
-## 📄 License
+## Тесты
 
-This project is licensed under the [MIT License](LICENSE).
+```bash
+uv run --frozen pytest -q
+```
+
+Тесты используют тестовые значения конфигурации и изолированные SQLite-базы,
+не требуют настоящих API-ключей, работающего бота, PostgreSQL или Redis.
+CI запускает тот же набор на Python 3.13. SQLite-тесты не заменяют проверку
+PostgreSQL-миграций или интеграцию с настоящими внешними API.
+
+## Структура
+
+```text
+app/
+  handlers/       Telegram-команды и callback-обработчики
+  keyboards/      Клавиатуры
+  states/         Состояния диалогов
+  middlewares/    Сессия БД на обновление Telegram
+  services/       Отслеживания, уведомления, проверка цен, поиск городов
+  repositories/   Запросы к БД
+  models/         SQLAlchemy-модели
+  providers/      Клиент Travelpayouts
+  cache/          Redis-кеш
+  scheduler/      Фоновая проверка цен
+  config/         Настройки из окружения и .env
+  database/       Engine и сессии
+  schemas/        Модели ответов API
+  data/           Справочник аэропортов
+  logging/        Консольные и файловые логи
+  utils/          Даты и форматирование
+alembic/          Миграции
+tests/            Тесты
+```
+
+Логи приложения пишутся в консоль и `logs/app.log` с ротацией.
+В Docker их можно смотреть через `docker compose logs`.
+[Схема БД](assets/db_schema.svg) — иллюстрация; актуальную структуру определяют
+модели и миграции.
+
+## Лицензия
+
+[MIT](LICENSE).

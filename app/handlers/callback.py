@@ -1,10 +1,8 @@
 from aiogram import Router, F
-from aiogram.types import CallbackQuery, Message
-from aiogram.filters import Command
+from aiogram.types import CallbackQuery
 
 from aiogram.fsm.context import FSMContext
 
-from app.states.track import TrackState
 from app.utils.track_formatter import format_tracks_list, format_archive_track
 
 from app.keyboards.main import main_keyboard
@@ -12,7 +10,6 @@ from app.keyboards.tracks import (
     archive_keyboard,
     tracks_keyboard,
 )
-from app.handlers.help import HELP_TEXT, help_keyboard
 
 from app.database.engine import async_session_maker
 
@@ -28,40 +25,6 @@ from app.bot import bot
 
 
 router = Router()
-
-@router.message(Command("archive"))
-async def archive_command(
-    message: Message,
-):
-
-    async with async_session_maker() as session:
-
-        repository = TrackRepository(
-            session
-        )
-
-        tracks = await repository.get_user_archive(
-            telegram_id=message.from_user.id
-        )
-
-        if not tracks:
-
-            await message.answer(
-                "🗄 Архив пуст.",
-                reply_markup=main_keyboard,
-            )
-
-            return
-
-        text = "🗄 <b>Архив поездок</b>\n\n" + "\n\n".join(
-            format_archive_track(track)
-            for track in tracks
-        )
-
-        await message.answer(
-            text,
-            reply_markup=archive_keyboard(),
-        )
 
 @router.callback_query(
     F.data == "cancel_track"
@@ -192,9 +155,7 @@ async def check_prices_callback(
     callback: CallbackQuery,
 ):
 
-    await callback.message.answer(
-        "🔄 Проверяю цены..."
-    )
+    await callback.answer("🔄 Проверяю цены...")
 
 
     async with async_session_maker() as session:
@@ -225,10 +186,10 @@ async def check_prices_callback(
         )
 
 
-        await service.check_prices()
-
-
-        await client.close()
+        try:
+            await service.check_prices(telegram_id=callback.from_user.id)
+        finally:
+            await client.close()
 
 
 
@@ -254,21 +215,3 @@ async def check_prices_callback(
             "📋 Активных отслеживаний нет.",
             reply_markup=main_keyboard,
         )
-
-    await callback.answer()
-
-
-
-@router.callback_query(
-    F.data == "help"
-)
-async def help_callback(
-    callback: CallbackQuery,
-):
-
-    await callback.message.answer(
-        HELP_TEXT,
-        reply_markup=help_keyboard(),
-    )
-
-    await callback.answer()

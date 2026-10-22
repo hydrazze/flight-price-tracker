@@ -1,3 +1,9 @@
+import pytest
+from types import SimpleNamespace
+from datetime import date
+from unittest.mock import AsyncMock, MagicMock
+from app.models.enums import TrackStatus
+
 from app.services.price_checker import PriceCheckerService
 
 
@@ -78,3 +84,28 @@ def test_should_not_notify_first_price_if_target_not_reached():
         new_price=12000,
         target_price=10000,
     ) is False
+
+# A fresh no-flights episode should notify again after flights reappear.
+
+
+@pytest.mark.asyncio
+async def test_no_flights_notification_resets_when_flights_reappear():
+    track = SimpleNamespace(
+        id=1, origin="MOW", destination="LED", departure_date=date(2027, 1, 1),
+        user=SimpleNamespace(telegram_id=123), no_flights_notified=True,
+        last_price=10000, target_price=None,
+    )
+    client = MagicMock(get_prices_for_dates=AsyncMock(side_effect=[
+        SimpleNamespace(data=[SimpleNamespace(price=10000)]),
+        SimpleNamespace(data=[]),
+        SimpleNamespace(data=[]),
+    ]))
+    notifications = MagicMock(send_no_flights_alert=AsyncMock())
+    service = PriceCheckerService(None, client, notifications, MagicMock())
+    await service._check_track(track)
+    assert track.status == TrackStatus.AVAILABLE
+    assert track.no_flights_notified is False
+    await service._check_track(track)
+    await service._check_track(track)
+    assert track.status == TrackStatus.NOT_FOUND
+    notifications.send_no_flights_alert.assert_awaited_once()

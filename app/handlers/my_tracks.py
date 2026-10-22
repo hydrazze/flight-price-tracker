@@ -89,8 +89,8 @@ async def open_track(
     repository = TrackRepository(session)
 
 
-    track = await repository.get_by_id(
-        track_id
+    track = await repository.get_user_track(
+        track_id, callback.from_user.id
     )
 
 
@@ -167,11 +167,20 @@ async def back_to_tracks(
 )
 async def delete_track_confirm(
     callback: CallbackQuery,
+    session: AsyncSession,
 ):
 
     track_id = int(
         callback.data.split(":")[1]
     )
+
+    track = await TrackRepository(session).get_user_track(
+        track_id, callback.from_user.id
+    )
+    if track is None:
+        await callback.answer("❌ Отслеживание не найдено.", show_alert=True)
+        return
+
 
 
     await callback.message.edit_text(
@@ -237,11 +246,20 @@ async def confirm_delete(
 async def edit_target_price(
     callback: CallbackQuery,
     state: FSMContext,
+    session: AsyncSession,
 ):
 
     track_id = int(
         callback.data.split(":")[1]
     )
+
+    track = await TrackRepository(session).get_user_track(
+        track_id, callback.from_user.id
+    )
+    if track is None:
+        await callback.answer("❌ Отслеживание не найдено.", show_alert=True)
+        return
+
 
 
     await state.update_data(
@@ -295,7 +313,7 @@ async def process_edit_target_price(
                 message.text
             )
 
-        except ValueError:
+        except (TypeError, ValueError):
 
             await message.answer(
                 "❌ Введите число или отправьте '-'."
@@ -305,12 +323,17 @@ async def process_edit_target_price(
 
 
 
+    if target_price is not None and not 0 < target_price <= 2_147_483_647:
+        await message.answer("❌ Введите положительную цену до 2147483647 ₽ или '-'.")
+        return
+
     service = TrackService(session)
 
 
     track = await service.update_target_price(
         track_id,
         target_price,
+        telegram_id=message.from_user.id,
     )
 
 
@@ -352,6 +375,14 @@ async def show_price_history(
     track_id = int(
         callback.data.split(":")[1]
     )
+
+    track = await TrackRepository(session).get_user_track(
+        track_id, callback.from_user.id
+    )
+    if track is None:
+        await callback.answer("❌ Отслеживание не найдено.", show_alert=True)
+        return
+
 
 
     repository = PriceHistoryRepository(
@@ -463,13 +494,14 @@ async def check_track_now(
     )
 
 
-    await checker.check_one_track(
-        track_id
-    )
+    try:
+        await checker.check_one_track(track_id)
+    finally:
+        await client.close()
 
 
-    track = await repository.get_by_id(
-        track_id
+    track = await repository.get_user_track(
+        track_id, callback.from_user.id
     )
 
 
