@@ -77,6 +77,8 @@ class PriceCheckerService:
                 origin=track.origin,
                 destination=track.destination,
                 departure_date=track.departure_date,
+                return_date=track.return_date,
+                stop_preference=track.stop_preference,
             )
 
 
@@ -152,6 +154,8 @@ class PriceCheckerService:
                 origin=track.origin,
                 destination=track.destination,
                 departure_date=track.departure_date,
+                return_date=track.return_date,
+                stop_preference=track.stop_preference,
             )
 
 
@@ -171,6 +175,8 @@ class PriceCheckerService:
                         origin=track.origin,
                         destination=track.destination,
                         departure_date=track.departure_date,
+                        return_date=track.return_date,
+                        stop_preference=track.stop_preference,
                     )
 
                     track.no_flights_notified = True
@@ -213,6 +219,8 @@ class PriceCheckerService:
                     origin=track.origin,
                     destination=track.destination,
                     departure_date=track.departure_date,
+                    return_date=track.return_date,
+                    stop_preference=track.stop_preference,
                     old_price=old_price,
                     new_price=cheapest_price,
                     target_price=track.target_price,

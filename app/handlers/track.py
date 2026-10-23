@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from aiogram import Router
 from aiogram.filters import Command
@@ -8,8 +8,11 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.states.track import TrackState
+from app.models.enums import StopPreference
+from app.keyboards.trip_options import trip_type_keyboard, stop_preference_keyboard
 
 from app.utils.date_parser import parse_date
+from app.utils.track_formatter import format_track
 
 from app.services.track import TrackService
 from app.services.user import UserService
@@ -28,6 +31,7 @@ async def start_track_creation(
     state: FSMContext,
 ):
 
+    await state.clear()
     await state.set_state(
         TrackState.waiting_origin
     )
@@ -66,6 +70,7 @@ async def create_track_button(
     state: FSMContext,
 ):
 
+    await state.clear()
     await state.set_state(
         TrackState.waiting_origin
     )
@@ -141,7 +146,7 @@ async def process_destination(
         "📅 <b>Дата вылета</b>\n\n"
         "Введите дату в формате:\n"
         "DD-MM-YYYY\n\n"
-        "Например: 30-08-2026",
+        f"Например: {(date.today() + timedelta(days=7)).strftime('%d-%m-%Y')}",
         reply_markup=cancel_keyboard,
     )
 
@@ -187,19 +192,75 @@ async def process_date(
     )
 
 
-    await state.set_state(
-        TrackState.waiting_target_price
+    await state.set_state(TrackState.waiting_trip_type)
+    await message.answer("✈️ Тип поездки", reply_markup=trip_type_keyboard)
+
+
+@router.callback_query(
+    TrackState.waiting_trip_type,
+    lambda c: c.data in ("trip:one_way", "trip:round_trip"),
+)
+async def process_trip_type(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    # Retire the selected keyboard so old choices cannot be clicked again.
+    await callback.message.edit_reply_markup(reply_markup=None)
+    if callback.data == "trip:round_trip":
+        await state.set_state(TrackState.waiting_return_date)
+        await callback.message.answer(
+            "📅 Введите дату обратного вылета в формате DD-MM-YYYY. "
+            "Она должна быть не раньше вылета туда.",
+            reply_markup=cancel_keyboard,
+        )
+    else:
+        await state.update_data(return_date=None)
+        await ask_stop_preference(callback.message, state)
+
+
+async def ask_stop_preference(message: Message, state: FSMContext):
+    await state.set_state(TrackState.waiting_stop_preference)
+    await message.answer(
+        "🛫 Предпочтения по пересадкам\n\n"
+        "Для поездки туда и обратно «Без пересадок» означает прямые рейсы "
+        "в обе стороны, «С пересадками» — пересадку хотя бы в одну сторону.",
+        reply_markup=stop_preference_keyboard,
     )
 
 
-    await message.answer(
-        "💰 <b>Желаемая цена</b>\n\n"
-        "Введите максимальную цену в рублях.\n\n"
+@router.message(TrackState.waiting_return_date)
+async def process_return_date(message: Message, state: FSMContext):
+    return_date = parse_date(message.text)
+    data = await state.get_data()
+    if return_date is None or return_date < data["departure_date"]:
+        await message.answer(
+            "❌ Введите дату DD-MM-YYYY не раньше даты вылета туда.",
+            reply_markup=cancel_keyboard,
+        )
+        return
+    await state.update_data(return_date=return_date)
+    await ask_stop_preference(message, state)
+
+
+@router.callback_query(
+    TrackState.waiting_stop_preference,
+    lambda c: c.data in {f"stops:{p.value}" for p in StopPreference},
+)
+async def process_stop_preference(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await callback.message.edit_reply_markup(reply_markup=None)
+    preference = StopPreference(callback.data.split(":", 1)[1])
+    await state.update_data(stop_preference=preference.value)
+    await state.set_state(TrackState.waiting_target_price)
+    data = await state.get_data()
+    price_scope = (
+        "за всю поездку туда и обратно"
+        if data.get("return_date") else "за перелёт в одну сторону"
+    )
+    await callback.message.answer(
+        f"💰 Введите максимальную цену в рублях {price_scope}.\n\n"
         "Например: 15000\n\n"
         "Или отправьте «-», чтобы получать любые изменения цены.",
         reply_markup=cancel_keyboard,
     )
-
 
 
 @router.message(
@@ -270,6 +331,8 @@ async def process_target_price(
         destination=data["destination"],
         departure_date=data["departure_date"],
         target_price=target_price,
+        return_date=data.get("return_date"),
+        stop_preference=StopPreference(data.get("stop_preference", "any")),
     )
 
 
@@ -289,6 +352,6 @@ async def process_target_price(
 
     await message.answer(
         "✅ <b>Отслеживание создано!</b>\n\n"
-        "Теперь я буду следить за ценой ✈️",
+        + format_track(track),
         reply_markup=main_keyboard,
     )

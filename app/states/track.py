@@ -9,6 +9,12 @@ class TrackState(StatesGroup):
 
     waiting_date = State()
 
+    waiting_trip_type = State()
+
+    waiting_return_date = State()
+
+    waiting_stop_preference = State()
+
     waiting_target_price = State()
 
     editing_target_price = State()
