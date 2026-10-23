@@ -8,6 +8,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    JSON,
     String,
     Enum,
     func,
@@ -102,6 +103,9 @@ class Track(Base):
         nullable=True,
     )
 
+
+    # Snapshot of the cheapest matching offer; always corresponds to last_price.
+    last_offer: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     status: Mapped[TrackStatus] = mapped_column(
         Enum(

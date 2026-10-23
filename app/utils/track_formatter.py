@@ -3,6 +3,8 @@ from datetime import date
 from app.models.track import Track
 from app.models.enums import StopPreference
 from app.services.city_resolver import resolver
+from app.utils.flight_formatter import format_flight_offer
+from app.utils.timezone import format_moscow_time
 
 
 def format_route(origin: str, destination: str) -> str:
@@ -58,19 +60,28 @@ def get_track_status(track: Track) -> str:
 
 def format_track(track: Track) -> str:
     last_checked = (
-        track.last_checked_at.strftime("%d.%m.%Y %H:%M")
+        format_moscow_time(track.last_checked_at)
         if track.last_checked_at
         else "нет данных"
     )
 
+    status = getattr(track.status, "value", track.status)
+    offer = format_flight_offer(track.last_offer, stale=status == "error")
+    if not offer and status == "available":
+        offer = "Подробности рейса появятся после следующей успешной проверки."
+    offer_block = f"{offer}\n\n" if offer else ""
+    price_label = "Текущая цена" if status == "available" else "Последняя найденная цена"
+    target_price = f"{track.target_price} ₽" if track.target_price is not None else "не указана"
+    last_price = f"{track.last_price} ₽" if track.last_price is not None else "нет данных"
     price_scope = "Цена за всю поездку туда и обратно.\n" if track.return_date else ""
     return (
         f"{format_track_itinerary(track)}\n\n"
         f"{price_scope}"
         f"🎯 Целевая цена:\n"
-        f"{track.target_price if track.target_price is not None else 'не указана'} ₽\n\n"
-        f"📉 Текущая цена:\n"
-        f"{track.last_price if track.last_price is not None else 'нет данных'} ₽\n\n"
+        f"{target_price}\n\n"
+        f"📉 {price_label}:\n"
+        f"{last_price}\n\n"
+        f"{offer_block}"
         f"{get_track_status(track)}\n"
         f"🕒 Последняя проверка: {last_checked}"
     )

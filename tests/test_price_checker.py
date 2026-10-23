@@ -89,7 +89,7 @@ def test_should_not_notify_first_price_if_target_not_reached():
 
 
 @pytest.mark.asyncio
-async def test_no_flights_notification_resets_when_flights_reappear():
+async def test_no_flights_notification_resets_when_flights_reappear(flight_factory):
     track = SimpleNamespace(
         id=1, origin="MOW", destination="LED", departure_date=date(2027, 1, 1),
         user=SimpleNamespace(telegram_id=123), no_flights_notified=True,
@@ -97,7 +97,7 @@ async def test_no_flights_notification_resets_when_flights_reappear():
         return_date=None, stop_preference=StopPreference.ANY,
     )
     client = MagicMock(get_prices_for_dates=AsyncMock(side_effect=[
-        SimpleNamespace(data=[SimpleNamespace(price=10000)]),
+        SimpleNamespace(data=[flight_factory(price=10000)]),
         SimpleNamespace(data=[]),
         SimpleNamespace(data=[]),
     ]))

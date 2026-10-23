@@ -114,7 +114,7 @@ async def test_duplicate_detection_includes_return_date_and_preferences(session)
 
 
 @pytest.mark.asyncio
-async def test_checker_passes_round_trip_options_and_uses_total_price():
+async def test_checker_passes_round_trip_options_and_uses_total_price(flight_factory):
     from types import SimpleNamespace
     track = Track(id=1, user_id=1, origin="MOW", destination="LED",
                   departure_date=date(2027, 1, 10), return_date=date(2027, 1, 20),
@@ -122,7 +122,7 @@ async def test_checker_passes_round_trip_options_and_uses_total_price():
                   target_price=10000, no_flights_notified=False)
     track.user = User(telegram_id=123, first_name="Test")
     client = MagicMock(get_prices_for_dates=AsyncMock(return_value=SimpleNamespace(
-        data=[SimpleNamespace(price=9000), SimpleNamespace(price=12000)])))
+        data=[flight_factory(price=9000), flight_factory(price=12000)])))
     notices = MagicMock(send_price_alert=AsyncMock())
     history = MagicMock(create=AsyncMock())
     checker = PriceCheckerService(None, client, notices, history)
