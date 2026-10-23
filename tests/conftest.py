@@ -16,3 +16,22 @@ def sample_track_data():
         "destination": "LED",
         "target_price": 10000,
     }
+
+@pytest.fixture
+def flight_factory():
+    from app.schemas.travelpayouts import FlightPrice
+
+    def make(**changes):
+        data = {
+            "origin": "MOW", "destination": "BEG", "origin_airport": "SVO",
+            "destination_airport": "BEG", "price": 18000,
+            "airline": "JU", "flight_number": "651",
+            "departure_at": "2027-03-10T10:00:00+03:00",
+            "return_at": None, "transfers": 0, "return_transfers": None,
+            "duration": 180, "duration_to": 180,
+            "link": "/search/MOW1003BEG1?t=test&price=18000",
+        }
+        data.update(changes)
+        return FlightPrice.model_validate(data)
+
+    return make

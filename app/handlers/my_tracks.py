@@ -30,6 +30,7 @@ from app.utils.track_formatter import (
 )
 
 from app.bot import bot
+from app.utils.timezone import format_moscow_time
 
 
 router = Router()
@@ -415,7 +416,7 @@ async def show_price_history(
 
         text += (
             f"💰 {item.price} ₽\n"
-            f"🕒 {item.checked_at.strftime('%d.%m.%Y %H:%M')}\n\n"
+            f"🕒 {format_moscow_time(item.checked_at)}\n\n"
         )
 
 

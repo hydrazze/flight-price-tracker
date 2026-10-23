@@ -6,6 +6,7 @@ from aiogram.exceptions import TelegramForbiddenError
 from app.logging.logger import logger
 from app.models.enums import StopPreference
 from app.utils.track_formatter import format_itinerary
+from app.utils.flight_formatter import format_flight_offer
 
 
 class NotificationService:
@@ -51,6 +52,7 @@ class NotificationService:
         target_price: int | None,
         return_date: date | None = None,
         stop_preference: StopPreference = StopPreference.ANY,
+        offer: dict | None = None,
     ) -> None:
 
         route = self._format_route(origin, destination, departure_date, return_date, stop_preference)
@@ -109,6 +111,10 @@ class NotificationService:
 
         if return_date is not None:
             text += "\n\nЦена за всю поездку туда и обратно."
+
+        details = format_flight_offer(offer)
+        if details:
+            text += "\n\n" + details
 
         await self._send_message(
             telegram_id=telegram_id,

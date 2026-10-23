@@ -161,6 +161,7 @@ class PriceCheckerService:
 
             if not response.data:
 
+                track.last_offer = None
                 track.status = TrackStatus.NOT_FOUND
 
                 track.last_checked_at = datetime.now(
@@ -190,10 +191,8 @@ class PriceCheckerService:
 
 
 
-            cheapest_price = min(
-                flight.price
-                for flight in response.data
-            )
+            cheapest_flight = min(response.data, key=lambda flight: flight.price)
+            cheapest_price = cheapest_flight.price
 
 
             old_price = track.last_price
@@ -208,12 +207,13 @@ class PriceCheckerService:
             )
 
 
+            offer = cheapest_flight.model_dump(mode="json")
+
             if self.should_notify(
                 old_price=old_price,
                 new_price=cheapest_price,
                 target_price=track.target_price,
             ):
-
                 await self.notification_service.send_price_alert(
                     telegram_id=track.user.telegram_id,
                     origin=track.origin,
@@ -224,19 +224,19 @@ class PriceCheckerService:
                     old_price=old_price,
                     new_price=cheapest_price,
                     target_price=track.target_price,
+                    offer=offer,
                 )
 
-
             if old_price != cheapest_price:
-
-                track.last_price = cheapest_price
-
-
                 await self.price_history_repository.create(
                     track_id=track.id,
                     price=cheapest_price,
                 )
 
+            # Keep price and details together; failed notifications can retry next check.
+            # Refresh details even when a different airline has the same fare.
+            track.last_price = cheapest_price
+            track.last_offer = offer
 
             logger.info(
                 f"Track #{track.id} checked. Price: {cheapest_price}"
