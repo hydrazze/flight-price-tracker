@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.enums import TrackStatus
+from app.models.enums import StopPreference, TrackStatus
 from app.models.track import Track
 from app.models.user import User
 
@@ -25,6 +25,8 @@ class TrackRepository:
         destination: str,
         departure_date: date,
         target_price: int | None = None,
+        return_date: date | None = None,
+        stop_preference: StopPreference = StopPreference.ANY,
     ) -> Track:
 
         track = Track(
@@ -33,6 +35,8 @@ class TrackRepository:
             destination=destination,
             departure_date=departure_date,
             target_price=target_price,
+            return_date=return_date,
+            stop_preference=stop_preference,
         )
 
         self.session.add(track)
@@ -165,6 +169,8 @@ class TrackRepository:
         origin: str,
         destination: str,
         departure_date: date,
+        return_date: date | None = None,
+        stop_preference: StopPreference = StopPreference.ANY,
     ) -> bool:
 
         result = await self.session.execute(
@@ -174,11 +180,13 @@ class TrackRepository:
                 Track.origin == origin,
                 Track.destination == destination,
                 Track.departure_date == departure_date,
+                Track.return_date == return_date,
+                Track.stop_preference == stop_preference,
                 Track.active.is_(True),
             )
         )
 
-        return result.scalar_one_or_none() is not None
+        return result.scalars().first() is not None
 
 
     async def archive_expired_tracks(

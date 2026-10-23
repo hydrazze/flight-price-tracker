@@ -2,6 +2,7 @@ from datetime import date
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.enums import StopPreference
 from app.repositories.track import TrackRepository
 
 
@@ -28,7 +29,12 @@ class TrackService:
         destination: str | dict,
         departure_date: date,
         target_price: int | None = None,
+        return_date: date | None = None,
+        stop_preference: StopPreference = StopPreference.ANY,
     ):
+        stop_preference = StopPreference(stop_preference)
+        if return_date is not None and return_date < departure_date:
+            raise ValueError("Return date cannot precede departure date")
         origin = self._normalize_airport(origin)
         destination = self._normalize_airport(destination)
 
@@ -37,6 +43,8 @@ class TrackService:
             origin=origin,
             destination=destination,
             departure_date=departure_date,
+            return_date=return_date,
+            stop_preference=stop_preference,
         )
 
         if exists:
@@ -48,6 +56,8 @@ class TrackService:
             destination=destination,
             departure_date=departure_date,
             target_price=target_price,
+            return_date=return_date,
+            stop_preference=stop_preference,
         )
 
     async def delete_track(

@@ -4,7 +4,8 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramForbiddenError
 
 from app.logging.logger import logger
-from app.services.city_resolver import resolver
+from app.models.enums import StopPreference
+from app.utils.track_formatter import format_itinerary
 
 
 class NotificationService:
@@ -32,13 +33,11 @@ class NotificationService:
         origin: str,
         destination: str,
         departure_date: date,
+        return_date: date | None = None,
+        stop_preference: StopPreference = StopPreference.ANY,
     ) -> str:
-        origin_name = resolver.get_city_name(origin)
-        destination_name = resolver.get_city_name(destination)
-
-        return (
-            f"✈️ {origin_name} ({origin.upper()}) → {destination_name} ({destination.upper()})\n"
-            f"📅 {departure_date.strftime('%d.%m.%Y')}"
+        return format_itinerary(
+            origin, destination, departure_date, return_date, stop_preference,
         )
 
     async def send_price_alert(
@@ -50,9 +49,11 @@ class NotificationService:
         old_price: int | None,
         new_price: int,
         target_price: int | None,
+        return_date: date | None = None,
+        stop_preference: StopPreference = StopPreference.ANY,
     ) -> None:
 
-        route = self._format_route(origin, destination, departure_date)
+        route = self._format_route(origin, destination, departure_date, return_date, stop_preference)
 
         if target_price is None:
             text = (
@@ -106,6 +107,9 @@ class NotificationService:
                 f"🎯 Ваша цель: {target_price} ₽"
             )
 
+        if return_date is not None:
+            text += "\n\nЦена за всю поездку туда и обратно."
+
         await self._send_message(
             telegram_id=telegram_id,
             text=text,
@@ -117,9 +121,11 @@ class NotificationService:
         origin: str,
         destination: str,
         departure_date: date,
+        return_date: date | None = None,
+        stop_preference: StopPreference = StopPreference.ANY,
     ) -> None:
 
-        route = self._format_route(origin, destination, departure_date)
+        route = self._format_route(origin, destination, departure_date, return_date, stop_preference)
 
         await self._send_message(
             telegram_id=telegram_id,
@@ -135,16 +141,18 @@ class NotificationService:
         origin: str,
         destination: str,
         departure_date: date,
+        return_date: date | None = None,
+        stop_preference: StopPreference = StopPreference.ANY,
     ) -> None:
 
-        route = self._format_route(origin, destination, departure_date)
+        route = self._format_route(origin, destination, departure_date, return_date, stop_preference)
 
         await self._send_message(
             telegram_id=telegram_id,
             text=(
                 "🛫 Отслеживание завершено\n\n"
                 f"{route}\n\n"
-                "Рейс уже состоялся.\n"
+                "Дата вылета туда уже прошла.\n"
                 "Отслеживание автоматически отключено."
             ),
         )

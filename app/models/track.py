@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     ForeignKey,
@@ -18,7 +19,7 @@ from sqlalchemy.orm import (
     relationship,
 )
 
-from app.models.enums import TrackStatus
+from app.models.enums import StopPreference, TrackStatus
 
 from app.database.base import Base
 
@@ -31,6 +32,12 @@ if TYPE_CHECKING:
 class Track(Base):
 
     __tablename__ = "tracks"
+    __table_args__ = (
+        CheckConstraint(
+            "return_date IS NULL OR return_date >= departure_date",
+            name="ck_tracks_return_date",
+        ),
+    )
 
 
     id: Mapped[int] = mapped_column(
@@ -71,6 +78,18 @@ class Track(Base):
         nullable=False,
     )
 
+
+    return_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    stop_preference: Mapped[StopPreference] = mapped_column(
+        Enum(
+            StopPreference, name="stoppreference", native_enum=False,
+            create_constraint=True,
+        ),
+        default=StopPreference.ANY,
+        server_default="ANY",
+        nullable=False,
+    )
 
     target_price: Mapped[int | None] = mapped_column(
         Integer,

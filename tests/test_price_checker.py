@@ -2,7 +2,7 @@ import pytest
 from types import SimpleNamespace
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock
-from app.models.enums import TrackStatus
+from app.models.enums import StopPreference, TrackStatus
 
 from app.services.price_checker import PriceCheckerService
 
@@ -94,6 +94,7 @@ async def test_no_flights_notification_resets_when_flights_reappear():
         id=1, origin="MOW", destination="LED", departure_date=date(2027, 1, 1),
         user=SimpleNamespace(telegram_id=123), no_flights_notified=True,
         last_price=10000, target_price=None,
+        return_date=None, stop_preference=StopPreference.ANY,
     )
     client = MagicMock(get_prices_for_dates=AsyncMock(side_effect=[
         SimpleNamespace(data=[SimpleNamespace(price=10000)]),

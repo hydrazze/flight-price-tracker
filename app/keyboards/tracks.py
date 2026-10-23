@@ -2,7 +2,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardButton
 
 from app.models.track import Track
-from app.utils.track_formatter import format_route
+from app.models.enums import StopPreference
 
 
 
@@ -15,8 +15,13 @@ def tracks_keyboard(
 
     for track in tracks:
 
+        dates = track.departure_date.strftime("%d.%m.%y")
+        if track.return_date:
+            dates += "–" + track.return_date.strftime("%d.%m.%y")
+        arrow = "↔" if track.return_date else "→"
+        preference = StopPreference(track.stop_preference or StopPreference.ANY)
         builder.button(
-            text=f"✈️ {format_route(track.origin, track.destination)}",
+            text=f"{track.origin} {arrow} {track.destination} | {dates} | {preference.label}",
             callback_data=f"track:{track.id}",
         )
 
